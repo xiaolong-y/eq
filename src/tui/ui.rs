@@ -21,7 +21,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(f.area());
 
     // Header
-    let _titles = vec!["TODAY", "tomorrow"];
+    let _titles = ["TODAY", "tomorrow"];
     let date_str = app.view_date.format("%a %b %d").to_string();
     let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}   [?] [q]", date_str);
     
@@ -57,7 +57,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .filter(|t| t.quadrant() == q)
             .collect();
         
-        q_tasks.sort_by(|a, b| b.score().cmp(&a.score()));
+        q_tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
 
         let is_active = app.selected_quadrant == q;
         

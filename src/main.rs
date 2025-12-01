@@ -169,7 +169,7 @@ fn find_task<'a>(store: &'a mut TaskStore, id: &str) -> Option<&'a mut Task> {
             .filter(|t| t.date == today && t.status == eq::models::task::TaskStatus::Pending)
             .collect();
         
-        tasks.sort_by(|a, b| b.score().cmp(&a.score()));
+        tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
         
         if idx > 0 && idx <= tasks.len() {
             // This is a bit unsafe if the list changed, but standard for CLI tools.
@@ -194,7 +194,7 @@ fn print_matrix(store: &TaskStore, date: NaiveDate) {
     let mut tasks: Vec<&Task> = store.tasks.iter()
         .filter(|t| t.date == date && t.status == eq::models::task::TaskStatus::Pending)
         .collect();
-    tasks.sort_by(|a, b| b.score().cmp(&a.score()));
+    tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
 
     if tasks.is_empty() {
         println!("No pending tasks.");

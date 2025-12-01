@@ -260,7 +260,7 @@ fn get_filtered_tasks<'a>(app: &'a App) -> Vec<&'a Task> {
             && t.status != TaskStatus::Dropped 
             && t.quadrant() == app.selected_quadrant)
         .collect();
-    tasks.sort_by(|a, b| b.score().cmp(&a.score()));
+    tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
     tasks
 }
 
