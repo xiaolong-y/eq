@@ -179,27 +179,46 @@ impl ZenState {
                     .add_modifier(ratatui::style::Modifier::BOLD),
             );
 
-            // Progress bar
-            let bar_width = 30u16.min(area.width.saturating_sub(4));
-            let bar_x = center_x.saturating_sub(bar_width / 2);
-            let filled = (bar_width as f64 * pomo.progress()) as u16;
+            // Progress indicator (elegant dot sequence)
+            let dot_count = 300; // 300 dots = 5 seconds per dot for 25min timer
+            let filled_dots = (dot_count as f64 * pomo.progress()) as u16;
 
-            let progress_color = if pomo.progress() < 0.75 {
-                Color::Rgb(100, 180, 100)
-            } else if pomo.progress() < 0.9 {
-                Color::Rgb(180, 180, 100)
-            } else {
-                Color::Rgb(180, 100, 100)
-            };
+            // Calculate centered position for dot sequence (compact, no spacing)
+            let dots_width = dot_count; // Adjacent dots
+            let dots_x = center_x.saturating_sub(dots_width / 2);
 
-            for i in 0..bar_width {
-                let char = if i < filled { "━" } else { "─" };
-                let color = if i < filled {
-                    progress_color
+            // Render compact dot sequence with color gradient
+            for i in 0..dot_count {
+                let x_pos = dots_x + i;
+
+                if i < filled_dots {
+                    // Filled dots with gradient based on position
+                    let progress_at_dot = i as f64 / dot_count as f64;
+                    let color = if progress_at_dot < 0.75 {
+                        // Green to yellow gradient
+                        let t = progress_at_dot / 0.75;
+                        Color::Rgb(
+                            (100.0 + t * 80.0) as u8,
+                            180,
+                            (100.0 - t * 80.0) as u8,
+                        )
+                    } else if progress_at_dot < 0.9 {
+                        // Yellow
+                        Color::Rgb(180, 180, 100)
+                    } else {
+                        // Red for final stretch
+                        Color::Rgb(180, 100, 100)
+                    };
+                    buf.set_string(x_pos, center_y, "•", Style::default().fg(color));
                 } else {
-                    Color::DarkGray
-                };
-                buf.set_string(bar_x + i, center_y, char, Style::default().fg(color));
+                    // Empty dots
+                    buf.set_string(
+                        x_pos,
+                        center_y,
+                        "·",
+                        Style::default().fg(Color::Rgb(60, 60, 70)),
+                    );
+                }
             }
 
             // Message
