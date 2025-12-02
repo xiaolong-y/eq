@@ -109,6 +109,7 @@ eq add "Call Mom" --tomorrow      # Schedule for tomorrow
 ```bash
 eq today              # View today's matrix
 eq tomorrow           # View tomorrow's matrix
+eq yesterday          # View yesterday's matrix
 eq week               # View weekly overview
 eq done <id>          # Mark as complete
 eq drop <id>          # Delete task

@@ -98,6 +98,9 @@ fn main() -> Result<(), Box<dyn Error>> {
         Some(Commands::Tomorrow) => {
             print_matrix(&store, Local::now().date_naive() + Duration::days(1));
         }
+        Some(Commands::Yesterday) => {
+            print_matrix(&store, Local::now().date_naive() - Duration::days(1));
+        }
         Some(Commands::Week) => {
             print_week(&store);
         }

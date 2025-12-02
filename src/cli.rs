@@ -49,6 +49,9 @@ pub enum Commands {
     /// Show tomorrow's matrix
     Tomorrow,
 
+    /// Show yesterday's matrix
+    Yesterday,
+
     /// Show weekly overview
     Week,
 
