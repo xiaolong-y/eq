@@ -7,7 +7,7 @@ use ratatui::{
 };
 use crate::tui::app::App;
 use crate::models::task::{Quadrant, TaskStatus};
-use unicode_width::UnicodeWidthStr;
+
 
 
 pub fn ui(f: &mut Frame, app: &mut App) {
@@ -88,8 +88,21 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             height: area.height.saturating_sub(2),
         };
 
-        for (i, task) in q_tasks.iter().enumerate() {
-            if i >= inner.height as usize { break; }
+        // Calculate scroll offset to ensure selected task is visible
+        let height = inner.height as usize;
+        let start_index = if is_active {
+            if app.selected_task_index >= height {
+                app.selected_task_index - height + 1
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+
+        for (i, task) in q_tasks.iter().enumerate().skip(start_index) {
+            let render_index = i - start_index;
+            if render_index >= height { break; }
             
             let mut style = Style::default();
             let mut prefix = "  ";
@@ -111,7 +124,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             }
 
             let content = format!("{}{:<width$} [{}]", prefix, task.title, task.score(), width = (inner.width as usize).saturating_sub(8));
-            buf.set_string(inner.x, inner.y + i as u16, content, style);
+            buf.set_string(inner.x, inner.y + render_index as u16, content, style);
         }
     };
 
@@ -250,28 +263,6 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .wrap(ratatui::widgets::Wrap { trim: false })
             .scroll((input_scroll, 0));
         f.render_widget(input, input_area);
-
-        // Set Cursor
-        if app.input_mode || matches!(app.current_screen, crate::tui::app::CurrentScreen::Chat) {
-             // Only show cursor in chat if we are in chat screen
-             // Actually app.input_mode is for the main editing. Chat has its own state.
-             // But we are inside the Chat screen block.
-             
-             // Find cursor coordinates
-             // The cursor is at the end of the text.
-             if let Some(last_line) = input_lines.last() {
-                 let cursor_x = input_area.x + last_line.width() as u16;
-                 let cursor_y = input_area.y + (total_input_lines as u16).saturating_sub(1).saturating_sub(input_scroll);
-                 
-                 // Ensure cursor is within input area
-                 if cursor_y >= input_area.y && cursor_y < input_area.y + input_area.height {
-                     f.set_cursor_position((cursor_x, cursor_y));
-                 }
-             } else {
-                 // Empty input
-                 f.set_cursor_position((input_area.x, input_area.y));
-             }
-        }
     }
 }
 

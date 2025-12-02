@@ -5,7 +5,7 @@
       "title": "Fill in job applications for Mckinsey",
       "urgency": 2,
       "importance": 3,
-      "status": "Pending",
+      "status": "Dropped",
       "date": "2025-12-02",
       "created_at": "2025-12-01T20:46:43.197761Z",
       "completed_at": null
@@ -28,6 +28,16 @@
       "status": "Pending",
       "date": "2025-12-01",
       "created_at": "2025-12-01T20:48:15.555791Z",
+      "completed_at": null
+    },
+    {
+      "id": "085526fe-ea24-450a-96e2-baa2c8d7611f",
+      "title": "Build a system to job sprint",
+      "urgency": 3,
+      "importance": 3,
+      "status": "Pending",
+      "date": "2025-12-01",
+      "created_at": "2025-12-02T01:16:35.925681Z",
       "completed_at": null
     }
   ]

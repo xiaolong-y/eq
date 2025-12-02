@@ -44,6 +44,10 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
     match key.code {
         KeyCode::Char('q') => return Some(true),
         KeyCode::Char('c') => {
+            use std::io::Write;
+            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("debug.log") {
+                writeln!(file, "Pressed 'c', switching to Chat").unwrap();
+            }
             app.current_screen = CurrentScreen::Chat;
         }
         KeyCode::Char('?') => {
