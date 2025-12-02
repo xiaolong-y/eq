@@ -7,6 +7,7 @@ use chrono::{Local, NaiveDate, Duration};
 use std::error::Error;
 
 fn main() -> Result<(), Box<dyn Error>> {
+    // Load .env file from current directory
     dotenv::dotenv().ok();
     let cli = Cli::parse();
     let mut store = TaskStore::load()?;
