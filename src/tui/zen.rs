@@ -54,10 +54,18 @@ impl Particle {
         self.y += self.vy;
 
         // Wrap around screen
-        if self.x < 0.0 { self.x = width as f32 - 1.0; }
-        if self.x >= width as f32 { self.x = 0.0; }
-        if self.y < 0.0 { self.y = height as f32 - 1.0; }
-        if self.y >= height as f32 { self.y = 0.0; }
+        if self.x < 0.0 {
+            self.x = width as f32 - 1.0;
+        }
+        if self.x >= width as f32 {
+            self.x = 0.0;
+        }
+        if self.y < 0.0 {
+            self.y = height as f32 - 1.0;
+        }
+        if self.y >= height as f32 {
+            self.y = 0.0;
+        }
     }
 }
 
@@ -166,7 +174,9 @@ impl ZenState {
                 time_x,
                 center_y.saturating_sub(2),
                 &time_str,
-                Style::default().fg(Color::White).add_modifier(ratatui::style::Modifier::BOLD),
+                Style::default()
+                    .fg(Color::White)
+                    .add_modifier(ratatui::style::Modifier::BOLD),
             );
 
             // Progress bar
@@ -184,7 +194,11 @@ impl ZenState {
 
             for i in 0..bar_width {
                 let char = if i < filled { "━" } else { "─" };
-                let color = if i < filled { progress_color } else { Color::DarkGray };
+                let color = if i < filled {
+                    progress_color
+                } else {
+                    Color::DarkGray
+                };
                 buf.set_string(bar_x + i, center_y, char, Style::default().fg(color));
             }
 

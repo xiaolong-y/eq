@@ -1,10 +1,9 @@
-use serde::{Deserialize, Serialize};
+use crate::storage::paths::history_log_path;
 use chrono::{DateTime, Utc};
-use uuid::Uuid;
+use serde::{Deserialize, Serialize};
 use std::fs::OpenOptions;
 use std::io::Write;
-use std::path::PathBuf;
-
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub enum EventAction {
@@ -37,21 +36,14 @@ impl LogEvent {
 }
 
 pub fn append_log(event: &LogEvent) -> std::io::Result<()> {
-    let path = get_log_path()?;
+    let path = history_log_path()?;
     if let Some(parent) = path.parent() {
         std::fs::create_dir_all(parent)?;
     }
 
-    let mut file = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(path)?;
+    let mut file = OpenOptions::new().create(true).append(true).open(path)?;
 
     let json = serde_json::to_string(event)?;
     writeln!(file, "{}", json)?;
     Ok(())
-}
-
-fn get_log_path() -> std::io::Result<PathBuf> {
-    Ok(PathBuf::from("data").join("history.jsonl"))
 }

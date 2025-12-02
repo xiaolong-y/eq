@@ -1,3 +1,7 @@
+use crate::models::task::{Quadrant, TaskStatus};
+use crate::tui::app::{App, CurrentScreen};
+use crate::tui::widgets::quadrant::QuadrantWidget;
+use crate::tui::zen::ZenState;
 use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
@@ -5,10 +9,6 @@ use ratatui::{
     widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
-use crate::tui::app::{App, CurrentScreen};
-use crate::tui::widgets::quadrant::QuadrantWidget;
-use crate::tui::zen::ZenState;
-use crate::models::task::{Quadrant, TaskStatus};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     // Handle special screen modes
@@ -30,11 +30,14 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Main Matrix
-            Constraint::Length(3), // Footer/Input
-        ].as_ref())
+        .constraints(
+            [
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Main Matrix
+                Constraint::Length(3), // Footer/Input
+            ]
+            .as_ref(),
+        )
         .split(f.area());
 
     // Header
@@ -63,7 +66,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(matrix_chunks[1]);
 
     // Filter tasks for current view
-    let tasks: Vec<_> = app.store.tasks.iter()
+    let tasks: Vec<_> = app
+        .store
+        .tasks
+        .iter()
         .filter(|t| t.date == app.view_date && t.status != TaskStatus::Dropped)
         .collect();
 
@@ -79,7 +85,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .style(Style::default().fg(Color::Yellow))
             .block(Block::default().borders(Borders::ALL).title(" Input "));
         f.render_widget(input, chunks[2]);
-        
+
         // Show cursor for input
         let x = chunks[2].x + 11 + app.input_buffer.len() as u16;
         let y = chunks[2].y + 1;
@@ -115,14 +121,19 @@ fn render_quadrant(
     all_tasks: &[&crate::models::task::Task],
     app: &App,
 ) {
-    let mut q_tasks: Vec<_> = all_tasks.iter()
+    let mut q_tasks: Vec<_> = all_tasks
+        .iter()
         .filter(|t| t.quadrant() == q)
         .cloned()
         .collect();
     q_tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
 
     let is_active = app.selected_quadrant == q && !app.input_mode;
-    let selected_idx = if is_active { Some(app.selected_task_index) } else { None };
+    let selected_idx = if is_active {
+        Some(app.selected_task_index)
+    } else {
+        None
+    };
 
     let widget = QuadrantWidget::new(q_tasks, is_active, q, selected_idx);
     f.render_widget(widget, area);
@@ -131,13 +142,10 @@ fn render_quadrant(
 fn render_chat(f: &mut Frame, app: &mut App) {
     let area = centered_rect(80, 80, f.area());
     f.render_widget(Clear, area);
-    
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Min(0),
-            Constraint::Length(3),
-        ].as_ref())
+        .constraints([Constraint::Min(0), Constraint::Length(3)].as_ref())
         .split(area);
 
     let block = Block::default()
@@ -146,25 +154,28 @@ fn render_chat(f: &mut Frame, app: &mut App) {
     f.render_widget(block, area);
 
     // Messages area
-    let messages_area = chunks[0].inner(ratatui::layout::Margin { vertical: 1, horizontal: 1 });
-    
+    let messages_area = chunks[0].inner(ratatui::layout::Margin {
+        vertical: 1,
+        horizontal: 1,
+    });
+
     // Build message lines with wrapping
     let width = messages_area.width as usize;
     let mut lines: Vec<Line> = Vec::new();
-    
+
     for msg in &app.chat_history {
-        let (role, color) = if msg.role == "user" { 
-            ("You", Color::Yellow) 
-        } else { 
-            ("AI", Color::Cyan) 
+        let (role, color) = if msg.role == "user" {
+            ("You", Color::Yellow)
+        } else {
+            ("AI", Color::Cyan)
         };
-        
+
         // Role header
         lines.push(Line::from(Span::styled(
             format!("{}:", role),
-            Style::default().fg(color).add_modifier(Modifier::BOLD)
+            Style::default().fg(color).add_modifier(Modifier::BOLD),
         )));
-        
+
         // Wrap content
         let wrapped = textwrap::wrap(&msg.content, width.saturating_sub(2));
         for line in wrapped {
@@ -172,13 +183,13 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         }
         lines.push(Line::from("")); // Spacing
     }
-    
+
     if app.is_loading {
         let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frame = frames[app.spinner_state as usize % frames.len()];
         lines.push(Line::from(Span::styled(
             format!("{} Thinking...", frame),
-            Style::default().fg(Color::Green)
+            Style::default().fg(Color::Green),
         )));
     }
 
@@ -197,8 +208,7 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         app.chat_scroll = max_scroll;
     }
 
-    let messages = Paragraph::new(lines)
-        .scroll((app.chat_scroll, 0));
+    let messages = Paragraph::new(lines).scroll((app.chat_scroll, 0));
     f.render_widget(messages, messages_area);
 
     // Scroll indicator
@@ -213,21 +223,21 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         } else {
             format!("{}%", scroll_pct)
         };
-        let indicator_span = Span::styled(
-            indicator,
-            Style::default().fg(Color::DarkGray)
-        );
+        let indicator_span = Span::styled(indicator, Style::default().fg(Color::DarkGray));
         let x = messages_area.right().saturating_sub(6);
         let y = messages_area.top();
         f.buffer_mut().set_span(x, y, &indicator_span, 6);
     }
 
     // Input area
-    let input_area = chunks[1].inner(ratatui::layout::Margin { vertical: 0, horizontal: 1 });
+    let input_area = chunks[1].inner(ratatui::layout::Margin {
+        vertical: 0,
+        horizontal: 1,
+    });
     let input_block = Block::default()
         .borders(Borders::TOP)
         .title(" Message (PgUp/PgDn to scroll, Ctrl+L clear) ");
-    
+
     let input = Paragraph::new(app.chat_input.as_str())
         .style(Style::default().fg(Color::White))
         .block(input_block);
@@ -242,9 +252,12 @@ fn render_chat(f: &mut Frame, app: &mut App) {
     if app.show_chat_help {
         let help_area = centered_rect(50, 40, f.area());
         f.render_widget(Clear, help_area);
-        
+
         let help_text = vec![
-            Line::from(Span::styled("Chat Keyboard Shortcuts", Style::default().add_modifier(Modifier::BOLD))),
+            Line::from(Span::styled(
+                "Chat Keyboard Shortcuts",
+                Style::default().add_modifier(Modifier::BOLD),
+            )),
             Line::from(""),
             Line::from("PgUp/PgDn    Scroll history"),
             Line::from("Ctrl+K/J     Scroll one line"),
@@ -255,9 +268,12 @@ fn render_chat(f: &mut Frame, app: &mut App) {
             Line::from("Ctrl+U       Clear input"),
             Line::from("Esc          Close chat"),
             Line::from(""),
-            Line::from(Span::styled("Press ? to close", Style::default().fg(Color::DarkGray))),
+            Line::from(Span::styled(
+                "Press ? to close",
+                Style::default().fg(Color::DarkGray),
+            )),
         ];
-        
+
         let help = Paragraph::new(help_text)
             .block(Block::default().borders(Borders::ALL).title(" Help "))
             .alignment(Alignment::Left);
@@ -268,31 +284,40 @@ fn render_chat(f: &mut Frame, app: &mut App) {
 fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Percentage((100 - percent_y) / 2),
-            Constraint::Percentage(percent_y),
-            Constraint::Percentage((100 - percent_y) / 2),
-        ].as_ref())
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_y) / 2),
+                Constraint::Percentage(percent_y),
+                Constraint::Percentage((100 - percent_y) / 2),
+            ]
+            .as_ref(),
+        )
         .split(r);
 
     Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([
-            Constraint::Percentage((100 - percent_x) / 2),
-            Constraint::Percentage(percent_x),
-            Constraint::Percentage((100 - percent_x) / 2),
-        ].as_ref())
+        .constraints(
+            [
+                Constraint::Percentage((100 - percent_x) / 2),
+                Constraint::Percentage(percent_x),
+                Constraint::Percentage((100 - percent_x) / 2),
+            ]
+            .as_ref(),
+        )
         .split(popup_layout[1])[1]
 }
 
 fn render_focus(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
-        .constraints([
-            Constraint::Length(3), // Header
-            Constraint::Min(0),    // Quadrant content
-            Constraint::Length(3), // Footer
-        ].as_ref())
+        .constraints(
+            [
+                Constraint::Length(3), // Header
+                Constraint::Min(0),    // Quadrant content
+                Constraint::Length(3), // Footer
+            ]
+            .as_ref(),
+        )
         .split(f.area());
 
     // Header
@@ -303,24 +328,40 @@ fn render_focus(f: &mut Frame, app: &mut App) {
         Quadrant::Drop => "ELIMINATE - Neither Urgent nor Important",
     };
 
-    let header = Paragraph::new(format!(" FOCUS MODE: {}   [z] Zen Mode  [Esc] Exit ", quadrant_name))
-        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
-        .block(Block::default().borders(Borders::ALL))
-        .alignment(Alignment::Center);
+    let header = Paragraph::new(format!(
+        " FOCUS MODE: {}   [z] Zen Mode  [Esc] Exit ",
+        quadrant_name
+    ))
+    .style(
+        Style::default()
+            .fg(Color::Yellow)
+            .add_modifier(Modifier::BOLD),
+    )
+    .block(Block::default().borders(Borders::ALL))
+    .alignment(Alignment::Center);
     f.render_widget(header, chunks[0]);
 
     // Quadrant content (full screen)
-    let tasks: Vec<_> = app.store.tasks.iter()
+    let tasks: Vec<_> = app
+        .store
+        .tasks
+        .iter()
         .filter(|t| t.date == app.view_date && t.status != TaskStatus::Dropped)
         .collect();
 
-    let mut q_tasks: Vec<_> = tasks.iter()
+    let mut q_tasks: Vec<_> = tasks
+        .iter()
         .filter(|t| t.quadrant() == app.selected_quadrant)
         .cloned()
         .collect();
     q_tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
 
-    let widget = QuadrantWidget::new(q_tasks, true, app.selected_quadrant, Some(app.selected_task_index));
+    let widget = QuadrantWidget::new(
+        q_tasks,
+        true,
+        app.selected_quadrant,
+        Some(app.selected_task_index),
+    );
     f.render_widget(widget, chunks[1]);
 
     // Footer
@@ -345,11 +386,14 @@ fn render_zen(f: &mut Frame, app: &mut App) {
     }
 
     // Get the current task
-    let tasks: Vec<_> = app.store.tasks.iter()
+    let tasks: Vec<_> = app
+        .store
+        .tasks
+        .iter()
         .filter(|t| {
             t.date == app.view_date
-            && t.status != TaskStatus::Dropped
-            && t.quadrant() == app.selected_quadrant
+                && t.status != TaskStatus::Dropped
+                && t.quadrant() == app.selected_quadrant
         })
         .collect();
 
@@ -382,13 +426,13 @@ fn render_zen(f: &mut Frame, app: &mut App) {
             Line::from(""),
             Line::from(""),
             Line::from(""),
-            Line::from(Span::styled(
-                &task.title,
-                title_style,
-            )),
+            Line::from(Span::styled(&task.title, title_style)),
             Line::from(""),
             Line::from(Span::styled(
-                format!("Urgency: {}  •  Importance: {}", task.urgency, task.importance),
+                format!(
+                    "Urgency: {}  •  Importance: {}",
+                    task.urgency, task.importance
+                ),
                 Style::default().fg(Color::DarkGray),
             )),
             Line::from(""),
@@ -414,8 +458,7 @@ fn render_zen(f: &mut Frame, app: &mut App) {
             )),
         ];
 
-        let empty_display = Paragraph::new(empty_lines)
-            .alignment(Alignment::Center);
+        let empty_display = Paragraph::new(empty_lines).alignment(Alignment::Center);
         f.render_widget(empty_display, task_area);
     }
 }

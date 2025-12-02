@@ -1,10 +1,10 @@
+use crate::models::task::{Quadrant, Task, TaskStatus};
 use ratatui::{
     buffer::Buffer,
     layout::Rect,
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Widget},
 };
-use crate::models::task::{Task, Quadrant, TaskStatus};
 
 /// Fix #3: Refactored QuadrantWidget that's actually used by ui.rs
 pub struct QuadrantWidget<'a> {
@@ -42,7 +42,9 @@ impl<'a> QuadrantWidget<'a> {
 impl<'a> Widget for QuadrantWidget<'a> {
     fn render(self, area: Rect, buf: &mut Buffer) {
         let border_style = if self.active {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            Style::default()
+                .fg(Color::Yellow)
+                .add_modifier(Modifier::BOLD)
         } else {
             Style::default().fg(Color::DarkGray)
         };
@@ -67,7 +69,7 @@ impl<'a> Widget for QuadrantWidget<'a> {
         }
 
         let height = inner.height as usize;
-        
+
         // Calculate scroll offset to ensure selected task is visible
         let start_index = if let Some(sel_idx) = self.selected_index {
             if sel_idx >= height {
@@ -86,7 +88,7 @@ impl<'a> Widget for QuadrantWidget<'a> {
             }
 
             let is_selected = self.selected_index == Some(i);
-            
+
             let mut style = Style::default();
             let prefix = if is_selected { "› " } else { "  " };
 
@@ -95,7 +97,9 @@ impl<'a> Widget for QuadrantWidget<'a> {
             }
 
             if task.status == TaskStatus::Completed {
-                style = style.fg(Color::DarkGray).add_modifier(Modifier::CROSSED_OUT);
+                style = style
+                    .fg(Color::DarkGray)
+                    .add_modifier(Modifier::CROSSED_OUT);
             } else {
                 style = style.fg(self.get_quadrant_color());
             }

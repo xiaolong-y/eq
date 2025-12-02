@@ -1,10 +1,10 @@
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
-use crate::tui::app::{App, CurrentScreen};
-use crate::models::task::{Task, Quadrant, TaskStatus};
-use crate::ai::{ChatMessage, AIResponse};
-use std::sync::mpsc;
+use crate::ai::{AIResponse, ChatMessage};
+use crate::models::task::{Quadrant, Task, TaskStatus};
 use crate::parser::input::parse_priority;
+use crate::tui::app::{App, CurrentScreen};
 use crate::tui::zen::Pomodoro;
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use std::sync::mpsc;
 
 pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
     // Poll for AI responses
@@ -30,16 +30,14 @@ pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
     }
 
     match event {
-        Event::Key(key) => {
-            match app.current_screen {
-                CurrentScreen::Main => handle_main_screen(key, app),
-                CurrentScreen::Editing => handle_editing_screen(key, app),
-                CurrentScreen::Chat => handle_chat_screen(key, app),
-                CurrentScreen::Focus => handle_focus_screen(key, app),
-                CurrentScreen::ZenMode => handle_zen_screen(key, app),
-                CurrentScreen::Exiting => Some(true),
-            }
-        }
+        Event::Key(key) => match app.current_screen {
+            CurrentScreen::Main => handle_main_screen(key, app),
+            CurrentScreen::Editing => handle_editing_screen(key, app),
+            CurrentScreen::Chat => handle_chat_screen(key, app),
+            CurrentScreen::Focus => handle_focus_screen(key, app),
+            CurrentScreen::ZenMode => handle_zen_screen(key, app),
+            CurrentScreen::Exiting => Some(true),
+        },
         _ => Some(false),
     }
 }
@@ -65,8 +63,9 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
         }
         KeyCode::Char('e') => {
             if let Some(task_id) = get_selected_task_id(app) {
-                 if let Some(task) = app.store.tasks.iter().find(|t| t.id == task_id) {
-                    app.input_buffer = format!("{} u{}i{}", task.title, task.urgency, task.importance);
+                if let Some(task) = app.store.tasks.iter().find(|t| t.id == task_id) {
+                    app.input_buffer =
+                        format!("{} u{}i{}", task.title, task.urgency, task.importance);
                     app.editing_task_id = Some(task_id);
                     app.current_screen = CurrentScreen::Editing;
                     app.input_mode = true;
@@ -101,7 +100,8 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
         }
         KeyCode::Char('>') | KeyCode::Char('.') => {
             if let Some(task_id) = get_selected_task_id(app) {
-                app.store.move_task_to_date(task_id, app.view_date + chrono::Duration::days(1));
+                app.store
+                    .move_task_to_date(task_id, app.view_date + chrono::Duration::days(1));
                 let _ = app.store.save();
                 // Fix #4: Clamp index after mutation
                 app.clamp_selected_index();
@@ -186,7 +186,7 @@ fn handle_editing_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 let mut urgency = 1;
                 let mut importance = 1;
                 let mut title_parts = Vec::new();
-                
+
                 for part in input.split_whitespace() {
                     if let Some((u, i)) = parse_priority(part) {
                         urgency = u;
@@ -317,18 +317,19 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                     role: "user".to_string(),
                     content: content.clone(),
                 });
-                
+
                 // Save after user message
                 app.save_chat_history();
-                
+
                 // Send to AI
                 if let Some(client) = &app.ai_client {
                     let (tx, rx) = mpsc::channel();
                     app.chat_receiver = Some(rx);
                     app.is_loading = true;
                     app.chat_auto_scroll = true;
-                    
-                    let context = serde_json::to_string_pretty(&app.store.tasks).unwrap_or_default();
+
+                    let context =
+                        serde_json::to_string_pretty(&app.store.tasks).unwrap_or_default();
                     client.send_message(app.chat_history.clone(), context, tx);
                 } else {
                     app.chat_history.push(ChatMessage {
@@ -336,7 +337,7 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                         content: "API Key not found. Please set OPENAI_API_KEY.".to_string(),
                     });
                 }
-                
+
                 app.chat_input.clear();
             }
         }
@@ -352,10 +353,15 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
 }
 
 fn get_filtered_tasks<'a>(app: &'a App) -> Vec<&'a Task> {
-    let mut tasks: Vec<&Task> = app.store.tasks.iter()
-        .filter(|t| t.date == app.view_date 
-            && t.status != TaskStatus::Dropped 
-            && t.quadrant() == app.selected_quadrant)
+    let mut tasks: Vec<&Task> = app
+        .store
+        .tasks
+        .iter()
+        .filter(|t| {
+            t.date == app.view_date
+                && t.status != TaskStatus::Dropped
+                && t.quadrant() == app.selected_quadrant
+        })
         .collect();
     tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
     tasks

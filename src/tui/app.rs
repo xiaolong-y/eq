@@ -1,24 +1,24 @@
-use std::io;
+use crate::models::store::TaskStore;
+use crate::models::task::{Quadrant, TaskStatus};
+use chrono::{Duration, Local, NaiveDate};
 use crossterm::{
     event::{self},
     execute,
     terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
-use crate::models::store::TaskStore;
-use crate::models::task::{Quadrant, TaskStatus};
-use chrono::{Local, NaiveDate, Duration};
+use std::io;
 
-use crate::ai::{AIClient, ChatMessage, AIResponse};
-use std::sync::mpsc;
 use super::zen::ZenState;
+use crate::ai::{AIClient, AIResponse, ChatMessage};
+use std::sync::mpsc;
 
 pub enum CurrentScreen {
     Main,
     Editing,
     Chat,
-    Focus,      // Full-screen quadrant view
-    ZenMode,    // Single task focus mode
+    Focus,   // Full-screen quadrant view
+    ZenMode, // Single task focus mode
     Exiting,
 }
 
@@ -32,7 +32,7 @@ pub struct App<'a> {
     pub input_mode: bool,
     pub editing_task_id: Option<uuid::Uuid>,
     pub show_help: bool,
-    
+
     // AI Chat State
     pub chat_history: Vec<ChatMessage>,
     pub chat_input: String,
@@ -41,8 +41,8 @@ pub struct App<'a> {
     pub is_loading: bool,
     pub chat_scroll: u16,
     pub chat_auto_scroll: bool,
-    pub show_chat_help: bool, // Fix #5: Chat help toggle
-    pub spinner_state: u8, // Spinner animation state
+    pub show_chat_help: bool,        // Fix #5: Chat help toggle
+    pub spinner_state: u8,           // Spinner animation state
     pub zen_state: Option<ZenState>, // Zen mode state with particles and pomodoro
 }
 
@@ -50,10 +50,14 @@ impl<'a> App<'a> {
     pub fn new(store: &'a mut TaskStore) -> App<'a> {
         // Fix #8: Load persisted chat history
         let saved_history = TaskStore::load_chat_history();
-        let chat_history: Vec<ChatMessage> = saved_history.into_iter()
-            .map(|m| ChatMessage { role: m.role, content: m.content })
+        let chat_history: Vec<ChatMessage> = saved_history
+            .into_iter()
+            .map(|m| ChatMessage {
+                role: m.role,
+                content: m.content,
+            })
             .collect();
-        
+
         App {
             store,
             current_screen: CurrentScreen::Main,
@@ -89,11 +93,13 @@ impl<'a> App<'a> {
 
     /// Fix #4: Get task count for current quadrant and clamp index if needed
     pub fn get_current_task_count(&self) -> usize {
-        self.store.tasks.iter()
+        self.store
+            .tasks
+            .iter()
             .filter(|t| {
-                t.date == self.view_date 
-                && t.status != TaskStatus::Dropped 
-                && t.quadrant() == self.selected_quadrant
+                t.date == self.view_date
+                    && t.status != TaskStatus::Dropped
+                    && t.quadrant() == self.selected_quadrant
             })
             .count()
     }
@@ -110,10 +116,12 @@ impl<'a> App<'a> {
 
     /// Fix #8: Save chat history to disk
     pub fn save_chat_history(&self) {
-        let history: Vec<crate::models::store::ChatMessage> = self.chat_history.iter()
-            .map(|m| crate::models::store::ChatMessage { 
-                role: m.role.clone(), 
-                content: m.content.clone() 
+        let history: Vec<crate::models::store::ChatMessage> = self
+            .chat_history
+            .iter()
+            .map(|m| crate::models::store::ChatMessage {
+                role: m.role.clone(),
+                content: m.content.clone(),
             })
             .collect();
         let _ = TaskStore::save_chat_history(&history);
@@ -139,10 +147,7 @@ pub fn run(store: &mut TaskStore) -> Result<(), Box<dyn std::error::Error>> {
 
     // Restore terminal
     disable_raw_mode()?;
-    execute!(
-        terminal.backend_mut(),
-        LeaveAlternateScreen
-    )?;
+    execute!(terminal.backend_mut(), LeaveAlternateScreen)?;
     terminal.show_cursor()?;
 
     if let Err(err) = res {

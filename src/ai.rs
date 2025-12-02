@@ -1,8 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+use reqwest::blocking::Client;
 use std::sync::mpsc;
 use std::thread;
-use reqwest::blocking::Client;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChatMessage {
@@ -29,22 +29,29 @@ impl AIClient {
         })
     }
 
-    pub fn send_message(&self, history: Vec<ChatMessage>, context: String, sender: mpsc::Sender<AIResponse>) {
+    pub fn send_message(
+        &self,
+        history: Vec<ChatMessage>,
+        context: String,
+        sender: mpsc::Sender<AIResponse>,
+    ) {
         let api_key = self.api_key.clone();
         let client = self.client.clone();
-        
+
         thread::spawn(move || {
             let mut modified_history = history.clone();
             if let Some(last_msg) = modified_history.last_mut() {
-                if last_msg.role == "user" && last_msg.content.trim().eq_ignore_ascii_case("quote") {
-                    last_msg.content = format!("{} [System ID: {}]", last_msg.content, uuid::Uuid::new_v4());
+                if last_msg.role == "user" && last_msg.content.trim().eq_ignore_ascii_case("quote")
+                {
+                    last_msg.content =
+                        format!("{} [System ID: {}]", last_msg.content, uuid::Uuid::new_v4());
                 }
             }
 
-            let mut messages = vec![
-                ChatMessage {
-                    role: "system".to_string(),
-                    content: format!(r#"You are a productivity coach in an Eisenhower Matrix task manager.
+            let mut messages = vec![ChatMessage {
+                role: "system".to_string(),
+                content: format!(
+                    r#"You are a productivity coach in an Eisenhower Matrix task manager.
 
 **YOUR ROLE:**
 - Break down vague goals into concrete, actionable tasks
@@ -72,9 +79,10 @@ If user says "quote", respond with ONE inspirational quote in English, Japanese,
 **CURRENT TASKS:**
 {}
 
-Be concise. No fluff."#, context),
-                }
-            ];
+Be concise. No fluff."#,
+                    context
+                ),
+            }];
             messages.extend(modified_history);
 
             let body = serde_json::json!({
@@ -85,7 +93,8 @@ Be concise. No fluff."#, context),
                 "messages": messages,
             });
 
-            let res = client.post("https://api.openai.com/v1/chat/completions")
+            let res = client
+                .post("https://api.openai.com/v1/chat/completions")
                 .header("Authorization", format!("Bearer {}", api_key))
                 .json(&body)
                 .send();
@@ -94,14 +103,20 @@ Be concise. No fluff."#, context),
                 Ok(response) => {
                     if response.status().is_success() {
                         if let Ok(json) = response.json::<serde_json::Value>() {
-                            if let Some(content) = json["choices"][0]["message"]["content"].as_str() {
+                            if let Some(content) = json["choices"][0]["message"]["content"].as_str()
+                            {
                                 let _ = sender.send(AIResponse::Success(content.to_string()));
                                 return;
                             }
                         }
-                        let _ = sender.send(AIResponse::Error("Failed to parse API response".to_string()));
+                        let _ = sender.send(AIResponse::Error(
+                            "Failed to parse API response".to_string(),
+                        ));
                     } else {
-                        let _ = sender.send(AIResponse::Error(format!("API Error: {}", response.status())));
+                        let _ = sender.send(AIResponse::Error(format!(
+                            "API Error: {}",
+                            response.status()
+                        )));
                     }
                 }
                 Err(e) => {

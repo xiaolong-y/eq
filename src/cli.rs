@@ -20,7 +20,7 @@ pub enum Commands {
         #[arg(long, short)]
         tomorrow: bool,
     },
-    
+
     /// Mark a task as done
     Done {
         /// Task ID or index
@@ -37,7 +37,7 @@ pub enum Commands {
     Edit {
         /// Task ID or index
         id: String,
-        
+
         /// New priority notation (e.g., u3i2)
         #[arg(trailing_var_arg = true)]
         args: Vec<String>,

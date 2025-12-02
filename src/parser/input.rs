@@ -34,7 +34,7 @@ fn parse_shorthand(input: &str) -> Option<(u8, u8)> {
 
     let mut u: Option<u8> = None;
     let mut i: Option<u8> = None;
-    
+
     // Find 'u' followed by a digit
     if let Some(u_idx) = lower.find('u') {
         if u_idx + 1 < lower.len() {
@@ -44,7 +44,7 @@ fn parse_shorthand(input: &str) -> Option<(u8, u8)> {
             }
         }
     }
-    
+
     // Find 'i' followed by a digit
     if let Some(i_idx) = lower.find('i') {
         if i_idx + 1 < lower.len() {
@@ -57,9 +57,7 @@ fn parse_shorthand(input: &str) -> Option<(u8, u8)> {
 
     // Both must be found with valid digits
     match (u, i) {
-        (Some(urgency), Some(importance)) => {
-            Some((urgency.clamp(1, 3), importance.clamp(1, 3)))
-        }
+        (Some(urgency), Some(importance)) => Some((urgency.clamp(1, 3), importance.clamp(1, 3))),
         _ => None,
     }
 }
@@ -82,7 +80,7 @@ mod tests {
         assert_eq!(parse_priority("i2u1"), Some((1, 2)));
         assert_eq!(parse_priority("u2i2"), Some((2, 2)));
     }
-    
+
     #[test]
     fn test_invalid() {
         assert_eq!(parse_priority("abc"), None);
