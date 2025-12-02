@@ -4,6 +4,7 @@ use crate::models::task::{Task, Quadrant, TaskStatus};
 use crate::ai::{ChatMessage, AIResponse};
 use std::sync::mpsc;
 use crate::parser::input::parse_priority;
+use crate::tui::zen::Pomodoro;
 
 pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
     // Poll for AI responses
@@ -34,6 +35,8 @@ pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
                 CurrentScreen::Main => handle_main_screen(key, app),
                 CurrentScreen::Editing => handle_editing_screen(key, app),
                 CurrentScreen::Chat => handle_chat_screen(key, app),
+                CurrentScreen::Focus => handle_focus_screen(key, app),
+                CurrentScreen::ZenMode => handle_zen_screen(key, app),
                 CurrentScreen::Exiting => Some(true),
             }
         }
@@ -44,6 +47,10 @@ pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
 fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
     match key.code {
         KeyCode::Char('q') => return Some(true),
+        KeyCode::Char('z') => {
+            // Enter Focus mode (full-screen quadrant)
+            app.current_screen = CurrentScreen::Focus;
+        }
         KeyCode::Char('c') => {
             app.current_screen = CurrentScreen::Chat;
         }
@@ -124,6 +131,24 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                     app.selected_task_index = count - 1;
                 } else {
                     app.selected_task_index -= 1;
+                }
+            }
+        }
+        KeyCode::PageDown => {
+            let count = get_task_count(app);
+            if count > 0 {
+                // Jump down by 5 items or to the end
+                app.selected_task_index = (app.selected_task_index + 5).min(count - 1);
+            }
+        }
+        KeyCode::PageUp => {
+            let count = get_task_count(app);
+            if count > 0 {
+                // Jump up by 5 items or to the start
+                if app.selected_task_index >= 5 {
+                    app.selected_task_index -= 5;
+                } else {
+                    app.selected_task_index = 0;
                 }
             }
         }
@@ -347,4 +372,119 @@ fn get_selected_task_id(app: &App) -> Option<uuid::Uuid> {
     } else {
         None
     }
+}
+
+fn handle_focus_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
+    match key.code {
+        KeyCode::Esc => {
+            // Exit to main screen
+            app.current_screen = CurrentScreen::Main;
+        }
+        KeyCode::Char('z') => {
+            // Enter Zen mode (single task focus)
+            app.current_screen = CurrentScreen::ZenMode;
+        }
+        KeyCode::Char('d') | KeyCode::Enter => {
+            // Toggle task completion
+            if let Some(task_id) = get_selected_task_id(app) {
+                app.store.toggle_complete_task(task_id);
+                let _ = app.store.save();
+                app.clamp_selected_index();
+            }
+        }
+        KeyCode::Char('x') => {
+            // Drop task
+            if let Some(task_id) = get_selected_task_id(app) {
+                app.store.drop_task(task_id);
+                let _ = app.store.save();
+                app.clamp_selected_index();
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            let count = get_task_count(app);
+            if count > 0 {
+                app.selected_task_index = (app.selected_task_index + 1) % count;
+            }
+        }
+        KeyCode::Up | KeyCode::Char('k') => {
+            let count = get_task_count(app);
+            if count > 0 {
+                if app.selected_task_index == 0 {
+                    app.selected_task_index = count - 1;
+                } else {
+                    app.selected_task_index -= 1;
+                }
+            }
+        }
+        KeyCode::PageDown => {
+            let count = get_task_count(app);
+            if count > 0 {
+                app.selected_task_index = (app.selected_task_index + 5).min(count - 1);
+            }
+        }
+        KeyCode::PageUp => {
+            let count = get_task_count(app);
+            if count > 0 {
+                if app.selected_task_index >= 5 {
+                    app.selected_task_index -= 5;
+                } else {
+                    app.selected_task_index = 0;
+                }
+            }
+        }
+        _ => {}
+    }
+    None
+}
+
+fn handle_zen_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
+    match key.code {
+        KeyCode::Esc | KeyCode::Char('z') => {
+            // Exit to focus screen
+            app.current_screen = CurrentScreen::Focus;
+        }
+        KeyCode::Char('d') | KeyCode::Enter | KeyCode::Char(' ') => {
+            // Mark done and move to next task
+            if let Some(task_id) = get_selected_task_id(app) {
+                app.store.toggle_complete_task(task_id);
+                let _ = app.store.save();
+                app.clamp_selected_index();
+
+                // Auto-advance to next task if available
+                if get_task_count(app) == 0 {
+                    // No more tasks, exit to focus view
+                    app.current_screen = CurrentScreen::Focus;
+                }
+            }
+        }
+        KeyCode::Char('s') => {
+            // Skip to next task without completing
+            let count = get_task_count(app);
+            if count > 0 {
+                app.selected_task_index = (app.selected_task_index + 1) % count;
+            }
+        }
+        KeyCode::Char('x') => {
+            // Drop task and move to next
+            if let Some(task_id) = get_selected_task_id(app) {
+                app.store.drop_task(task_id);
+                let _ = app.store.save();
+                app.clamp_selected_index();
+
+                // Auto-exit if no more tasks
+                if get_task_count(app) == 0 {
+                    app.current_screen = CurrentScreen::Focus;
+                }
+            }
+        }
+        KeyCode::Char('r') => {
+            // Reset pomodoro timer
+            if let Some(ref mut zen_state) = app.zen_state {
+                zen_state.pomodoro = Some(Pomodoro::new(25)); // Reset to 25 minutes
+                zen_state.message = String::from("Focus on what matters");
+            }
+        }
+        _ => {}
+    }
+    None
 }

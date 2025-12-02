@@ -2,14 +2,32 @@ use ratatui::{
     layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     text::{Line, Span},
-    widgets::{Block, Borders, Clear, Paragraph, Widget},
+    widgets::{Block, Borders, Clear, Paragraph},
     Frame,
 };
 use crate::tui::app::{App, CurrentScreen};
 use crate::tui::widgets::quadrant::QuadrantWidget;
+use crate::tui::zen::ZenState;
 use crate::models::task::{Quadrant, TaskStatus};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
+    // Handle special screen modes
+    match app.current_screen {
+        CurrentScreen::Chat => {
+            render_chat(f, app);
+            return;
+        }
+        CurrentScreen::Focus => {
+            render_focus(f, app);
+            return;
+        }
+        CurrentScreen::ZenMode => {
+            render_zen(f, app);
+            return;
+        }
+        _ => {}
+    }
+
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -21,8 +39,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Header
     let date_str = app.view_date.format("%a %b %d").to_string();
-    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}   [c]hat [?] [q]", date_str);
-    
+    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}    [?] [q]", date_str);
+
     let header = Paragraph::new(header_text)
         .block(Block::default().borders(Borders::ALL))
         .alignment(Alignment::Center);
@@ -67,7 +85,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let y = chunks[2].y + 1;
         f.set_cursor_position((x.min(chunks[2].right() - 2), y));
     } else {
-        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [e]dit  [>]move  [↑↓←→]navigate  [tab]quadrant  [t]omorrow  [c]hat  [q]uit")
+        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [e]dit  [z]focus  [>]move  [↑↓←→]navigate  [tab]quadrant  [t]omorrow  [c]hat  [q]uit")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::TOP));
@@ -83,14 +101,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title(" Wisdom "))
             .alignment(Alignment::Center)
             .wrap(ratatui::widgets::Wrap { trim: true });
-        
+
         f.render_widget(Clear, area);
         f.render_widget(popup, area);
-    }
-
-    // Chat UI
-    if let CurrentScreen::Chat = app.current_screen {
-        render_chat(f, app);
     }
 }
 
@@ -161,9 +174,11 @@ fn render_chat(f: &mut Frame, app: &mut App) {
     }
     
     if app.is_loading {
+        let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
+        let frame = frames[app.spinner_state as usize % frames.len()];
         lines.push(Line::from(Span::styled(
-            "Thinking...",
-            Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC)
+            format!("{} Thinking...", frame),
+            Style::default().fg(Color::Green)
         )));
     }
 
@@ -268,4 +283,139 @@ fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
             Constraint::Percentage((100 - percent_x) / 2),
         ].as_ref())
         .split(popup_layout[1])[1]
+}
+
+fn render_focus(f: &mut Frame, app: &mut App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Length(3), // Header
+            Constraint::Min(0),    // Quadrant content
+            Constraint::Length(3), // Footer
+        ].as_ref())
+        .split(f.area());
+
+    // Header
+    let quadrant_name = match app.selected_quadrant {
+        Quadrant::DoFirst => "DO NOW - Urgent & Important",
+        Quadrant::Schedule => "SCHEDULE - Important, Not Urgent",
+        Quadrant::Delegate => "DELEGATE - Urgent, Not Important",
+        Quadrant::Drop => "ELIMINATE - Neither Urgent nor Important",
+    };
+
+    let header = Paragraph::new(format!(" FOCUS MODE: {}   [z] Zen Mode  [Esc] Exit ", quadrant_name))
+        .style(Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))
+        .block(Block::default().borders(Borders::ALL))
+        .alignment(Alignment::Center);
+    f.render_widget(header, chunks[0]);
+
+    // Quadrant content (full screen)
+    let tasks: Vec<_> = app.store.tasks.iter()
+        .filter(|t| t.date == app.view_date && t.status != TaskStatus::Dropped)
+        .collect();
+
+    let mut q_tasks: Vec<_> = tasks.iter()
+        .filter(|t| t.quadrant() == app.selected_quadrant)
+        .cloned()
+        .collect();
+    q_tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+
+    let widget = QuadrantWidget::new(q_tasks, true, app.selected_quadrant, Some(app.selected_task_index));
+    f.render_widget(widget, chunks[1]);
+
+    // Footer
+    let footer = Paragraph::new("[↑↓]navigate  [d/Enter]done  [x]drop  [z]zen  [Esc]exit")
+        .style(Style::default().fg(Color::DarkGray))
+        .alignment(Alignment::Center)
+        .block(Block::default().borders(Borders::TOP));
+    f.render_widget(footer, chunks[2]);
+}
+
+fn render_zen(f: &mut Frame, app: &mut App) {
+    // Initialize zen state if needed
+    let area = f.area();
+    if app.zen_state.is_none() {
+        app.zen_state = Some(ZenState::new(area.width, area.height, 25)); // 25 min pomodoro
+    }
+
+    // Update and render zen state (particles and pomodoro)
+    if let Some(ref mut zen_state) = app.zen_state {
+        zen_state.update(area.width, area.height);
+        zen_state.render(area, f.buffer_mut());
+    }
+
+    // Get the current task
+    let tasks: Vec<_> = app.store.tasks.iter()
+        .filter(|t| {
+            t.date == app.view_date
+            && t.status != TaskStatus::Dropped
+            && t.quadrant() == app.selected_quadrant
+        })
+        .collect();
+
+    let mut sorted_tasks = tasks.clone();
+    sorted_tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+
+    let current_task = if app.selected_task_index < sorted_tasks.len() {
+        Some(sorted_tasks[app.selected_task_index])
+    } else {
+        None
+    };
+
+    // Render task on top of particles in centered area
+    let task_area = centered_rect(80, 40, area);
+
+    if let Some(task) = current_task {
+        // Task title style - add strikethrough if completed
+        let title_style = if task.status == TaskStatus::Completed {
+            Style::default()
+                .fg(Color::Rgb(120, 120, 120))
+                .add_modifier(Modifier::BOLD)
+                .add_modifier(Modifier::CROSSED_OUT)
+        } else {
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD)
+        };
+
+        let task_lines = vec![
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(Span::styled(
+                &task.title,
+                title_style,
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                format!("Urgency: {}  •  Importance: {}", task.urgency, task.importance),
+                Style::default().fg(Color::DarkGray),
+            )),
+            Line::from(""),
+        ];
+
+        let task_display = Paragraph::new(task_lines)
+            .alignment(Alignment::Center)
+            .wrap(ratatui::widgets::Wrap { trim: true });
+        f.render_widget(task_display, task_area);
+    } else {
+        let empty_lines = vec![
+            Line::from(""),
+            Line::from(""),
+            Line::from(""),
+            Line::from(Span::styled(
+                "No tasks in this quadrant.",
+                Style::default().fg(Color::DarkGray),
+            )),
+            Line::from(""),
+            Line::from(Span::styled(
+                "Press Esc to return.",
+                Style::default().fg(Color::Yellow),
+            )),
+        ];
+
+        let empty_display = Paragraph::new(empty_lines)
+            .alignment(Alignment::Center);
+        f.render_widget(empty_display, task_area);
+    }
 }

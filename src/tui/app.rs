@@ -11,11 +11,14 @@ use chrono::{Local, NaiveDate, Duration};
 
 use crate::ai::{AIClient, ChatMessage, AIResponse};
 use std::sync::mpsc;
+use super::zen::ZenState;
 
 pub enum CurrentScreen {
     Main,
     Editing,
     Chat,
+    Focus,      // Full-screen quadrant view
+    ZenMode,    // Single task focus mode
     Exiting,
 }
 
@@ -39,6 +42,8 @@ pub struct App<'a> {
     pub chat_scroll: u16,
     pub chat_auto_scroll: bool,
     pub show_chat_help: bool, // Fix #5: Chat help toggle
+    pub spinner_state: u8, // Spinner animation state
+    pub zen_state: Option<ZenState>, // Zen mode state with particles and pomodoro
 }
 
 impl<'a> App<'a> {
@@ -59,7 +64,7 @@ impl<'a> App<'a> {
             input_mode: false,
             editing_task_id: None,
             show_help: false,
-            
+
             chat_history,
             chat_input: String::new(),
             ai_client: AIClient::new(),
@@ -68,6 +73,8 @@ impl<'a> App<'a> {
             chat_scroll: 0,
             chat_auto_scroll: true,
             show_chat_help: false,
+            spinner_state: 0,
+            zen_state: None,
         }
     }
 
@@ -150,6 +157,9 @@ fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
 ) -> io::Result<()> {
     loop {
+        // Increment spinner state for animation
+        app.spinner_state = app.spinner_state.wrapping_add(1);
+
         terminal.draw(|f| crate::tui::ui::ui(f, app))?;
 
         // Poll for AI responses
