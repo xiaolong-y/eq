@@ -62,22 +62,20 @@ Score = (Importance × 3) + (Urgency × 2)
 
 Launch with: `eq tui`
 
-### Navigation
-- **`Tab`**: Cycle through quadrants.
-- **`h` / `l`** (or `←` / `→`): Move between columns.
-- **`j` / `k`** (or `↓` / `↑`): Move up/down within a list.
-- **`q`**: Quit.
+Press **`?`** anytime to see the full keyboard shortcuts reference.
 
-### Actions
-- **`a`**: **Add** a new task.
-    - Input format: `Task Name !!!$$` or `Task Name u3i2`.
-- **`e`**: **Edit** the selected task.
-- **`d`** / **`Enter`**: Toggle task **Done** status (undo if already done).
-- **`x`**: **Drop** (delete) the task.
-- **`>`** / **`.`**: **Move** task to Tomorrow.
-- **`t`**: Toggle view between **Today** and **Tomorrow**.
-- **`?`**: Toggle help / wisdom.
-- **`c`**: Open **AI Chat** interface.
+### Quick Start
+- **`a`**: Add a new task (format: `Task Name !!!$$` or `Task Name u3i2`)
+- **`d`** / **`Enter`**: Toggle task done/pending
+- **`x`**: Drop (delete) a task
+- **`e`**: Edit the selected task
+- **`↑↓`** or **`j k`**: Navigate tasks
+- **`Tab`**: Cycle through quadrants
+- **`t`**: Toggle tomorrow view
+- **`y`**: View yesterday's tasks
+- **`z`**: Enter zen/focus mode
+- **`c`**: Open AI Chat interface
+- **`q`**: Quit
 
 ### AI Chat Interface
 - **`Enter`**: Send message.

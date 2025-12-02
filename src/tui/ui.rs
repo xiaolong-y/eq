@@ -91,22 +91,49 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let y = chunks[2].y + 1;
         f.set_cursor_position((x.min(chunks[2].right() - 2), y));
     } else {
-        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [e]dit  [z]focus  [>]move  [↑↓←→]navigate  [tab]quadrant  [t]omorrow  [c]hat  [q]uit")
+        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [↑↓]nav  [tab]quadrant  [?]help  [q]uit")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::TOP));
         f.render_widget(help, chunks[2]);
     }
 
-    // Easter Egg Popup
+    // Keyboard Shortcuts Help
     if app.show_help {
-        let area = centered_rect(60, 20, f.area());
-        let text = "Hey, if you wonder if you need one more productivity tool to be more productive, the answer is probably no. Alas, we are here.";
-        let popup = Paragraph::new(text)
-            .style(Style::default().fg(Color::Cyan))
-            .block(Block::default().borders(Borders::ALL).title(" Wisdom "))
-            .alignment(Alignment::Center)
-            .wrap(ratatui::widgets::Wrap { trim: true });
+        let area = centered_rect(70, 80, f.area());
+
+        let help_text = vec![
+            Line::from(Span::styled("Navigation:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from("  ↑↓ j k          Navigate tasks"),
+            Line::from("  ← → h l          Switch columns"),
+            Line::from("  Tab              Cycle quadrants"),
+            Line::from("  PgUp/PgDn        Jump 5 items"),
+            Line::from(""),
+            Line::from(Span::styled("Task Actions:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from("  a                Add new task"),
+            Line::from("  e                Edit selected task"),
+            Line::from("  d / Enter        Toggle task done"),
+            Line::from("  x                Drop (delete) task"),
+            Line::from("  >  .             Move task to tomorrow"),
+            Line::from(""),
+            Line::from(Span::styled("View Controls:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from("  t                Toggle tomorrow view"),
+            Line::from("  y                View yesterday"),
+            Line::from(""),
+            Line::from(Span::styled("Special Modes:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from("  z                Enter zen/focus mode"),
+            Line::from("  c                Open AI chat"),
+            Line::from(""),
+            Line::from(Span::styled("Other:", Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD))),
+            Line::from("  ?                Toggle this help"),
+            Line::from("  q                Quit"),
+        ];
+
+        let popup = Paragraph::new(help_text)
+            .style(Style::default().fg(Color::White))
+            .block(Block::default().borders(Borders::ALL).title(" Keyboard Shortcuts ")
+                .title_style(Style::default().fg(Color::Cyan).add_modifier(Modifier::BOLD)))
+            .alignment(Alignment::Left);
 
         f.render_widget(Clear, area);
         f.render_widget(popup, area);

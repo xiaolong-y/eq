@@ -98,6 +98,11 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
             // Fix #4: Clamp index when switching views
             app.clamp_selected_index();
         }
+        KeyCode::Char('y') => {
+            app.view_date = chrono::Local::now().date_naive() - chrono::Duration::days(1);
+            // Clamp index when switching views
+            app.clamp_selected_index();
+        }
         KeyCode::Char('>') | KeyCode::Char('.') => {
             if let Some(task_id) = get_selected_task_id(app) {
                 app.store
