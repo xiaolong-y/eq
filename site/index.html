@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EQ: Eisenhower Quadrants</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <pre class="ascii-logo">
+  _____ ____  
+ | ____/ __ \ 
+ |  __| |  | |
+ | |__| |__| |
+ |_____\___\_\
+            </pre>
+            <h1>EQ: Eisenhower Quadrants</h1>
+            <p class="tagline">Terminal-based task manager for high-performance prioritization.</p>
+            <div class="badges">
+                <span class="badge">Rust</span>
+                <span class="badge">TUI</span>
+                <span class="badge">Productivity</span>
+            </div>
+        </header>
+
+        <main>
+            <section id="about">
+                <h2>What is EQ?</h2>
+                <p>
+                    <strong>EQ</strong> is a terminal-based task manager built in Rust, designed to help you prioritize tasks using the <strong>Eisenhower Matrix</strong> method. 
+                    It focuses on speed, keyboard-centric navigation, and clear visual separation of priorities.
+                </p>
+                <div class="quadrants-preview">
+                    <div class="quadrant q1">
+                        <h3>DO FIRST (Q1)</h3>
+                        <p>High Importance, High Urgency</p>
+                    </div>
+                    <div class="quadrant q2">
+                        <h3>SCHEDULE (Q2)</h3>
+                        <p>High Importance, Low Urgency</p>
+                    </div>
+                    <div class="quadrant q3">
+                        <h3>DELEGATE (Q3)</h3>
+                        <p>Low Importance, High Urgency</p>
+                    </div>
+                    <div class="quadrant q4">
+                        <h3>DROP (Q4)</h3>
+                        <p>Low Importance, Low Urgency</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="install">
+                <h2>🚀 Installation</h2>
+                <div class="code-block">
+                    <div class="code-header">Install via Cargo</div>
+                    <pre><code>cargo install --path .</code></pre>
+                </div>
+                <p>Or add it to your path manually.</p>
+            </section>
+
+            <section id="usage">
+                <h2>⌨️ Usage</h2>
+                <p>Launch the interactive TUI:</p>
+                <div class="code-block">
+                    <pre><code>eq tui</code></pre>
+                </div>
+                
+                <h3>Quick Shortcuts</h3>
+                <ul class="shortcuts-list">
+                    <li><kbd>a</kbd> Add new task</li>
+                    <li><kbd>d</kbd> Toggle done</li>
+                    <li><kbd>x</kbd> Drop task</li>
+                    <li><kbd>z</kbd> Zen mode</li>
+                    <li><kbd>c</kbd> AI Chat</li>
+                    <li><kbd>?</kbd> Help</li>
+                </ul>
+            </section>
+
+            <section id="features">
+                <h2>✨ Features</h2>
+                <ul>
+                    <li><strong>Eisenhower Matrix:</strong> Automatically sorts tasks by importance and urgency.</li>
+                    <li><strong>Keyboard Driven:</strong> Vim-like navigation (j/k) and shortcuts.</li>
+                    <li><strong>AI Integration:</strong> Chat with your tasks using OpenAI (optional).</li>
+                    <li><strong>Local First:</strong> Data stored locally in JSON/JSONL.</li>
+                </ul>
+            </section>
+        </main>
+
+        <footer>
+            <p>Built with ❤️ in Rust.</p>
+            <p><a href="https://github.com/xiaolong-y/eq">View on GitHub</a></p>
+        </footer>
+    </div>
+</body>
+</html>
