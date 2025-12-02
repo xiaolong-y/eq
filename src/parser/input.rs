@@ -32,23 +32,36 @@ fn parse_shorthand(input: &str) -> Option<(u8, u8)> {
         return None;
     }
 
-    // Simple regex-like parsing manually
-    let mut u = 1;
-    let mut i = 1;
+    let mut u: Option<u8> = None;
+    let mut i: Option<u8> = None;
     
-    // Extract numbers after u and i
-    let u_idx = lower.find('u')?;
-    let i_idx = lower.find('i')?;
-
-    // Check if followed by digit
-    if u_idx + 1 < lower.len() {
-        u = lower[u_idx+1..u_idx+2].parse().ok()?;
+    // Find 'u' followed by a digit
+    if let Some(u_idx) = lower.find('u') {
+        if u_idx + 1 < lower.len() {
+            let next_char = lower.chars().nth(u_idx + 1)?;
+            if next_char.is_ascii_digit() {
+                u = next_char.to_digit(10).map(|d| d as u8);
+            }
+        }
     }
-    if i_idx + 1 < lower.len() {
-        i = lower[i_idx+1..i_idx+2].parse().ok()?;
+    
+    // Find 'i' followed by a digit
+    if let Some(i_idx) = lower.find('i') {
+        if i_idx + 1 < lower.len() {
+            let next_char = lower.chars().nth(i_idx + 1)?;
+            if next_char.is_ascii_digit() {
+                i = next_char.to_digit(10).map(|d| d as u8);
+            }
+        }
     }
 
-    Some((u.clamp(1, 3), i.clamp(1, 3)))
+    // Both must be found with valid digits
+    match (u, i) {
+        (Some(urgency), Some(importance)) => {
+            Some((urgency.clamp(1, 3), importance.clamp(1, 3)))
+        }
+        _ => None,
+    }
 }
 
 #[cfg(test)]
@@ -74,5 +87,15 @@ mod tests {
     fn test_invalid() {
         assert_eq!(parse_priority("abc"), None);
         assert_eq!(parse_priority("task!"), None); // Contains letters
+    }
+
+    #[test]
+    fn test_edge_cases() {
+        // Fix #2: These should not crash
+        assert_eq!(parse_priority("ui"), None);
+        assert_eq!(parse_priority("iu"), None);
+        assert_eq!(parse_priority("u"), None);
+        assert_eq!(parse_priority("i"), None);
+        assert_eq!(parse_priority(""), None);
     }
 }

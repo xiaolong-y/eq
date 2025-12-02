@@ -13,6 +13,13 @@ pub struct TaskStore {
     pub tasks: Vec<Task>,
 }
 
+/// Chat message for persistence
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChatMessage {
+    pub role: String,
+    pub content: String,
+}
+
 impl TaskStore {
     pub fn load() -> Result<Self, Box<dyn std::error::Error>> {
         let path = Self::get_path()?;
@@ -49,6 +56,37 @@ impl TaskStore {
         Ok(PathBuf::from("data").join("tasks.json"))
     }
 
+    /// Load chat history from file
+    pub fn load_chat_history() -> Vec<ChatMessage> {
+        let path = PathBuf::from("data").join("chat_history.json");
+        if !path.exists() {
+            return Vec::new();
+        }
+        
+        match fs::read_to_string(&path) {
+            Ok(content) => serde_json::from_str(&content).unwrap_or_default(),
+            Err(_) => Vec::new(),
+        }
+    }
+
+    /// Save chat history to file
+    pub fn save_chat_history(history: &[ChatMessage]) -> Result<(), Box<dyn std::error::Error>> {
+        let path = PathBuf::from("data").join("chat_history.json");
+        
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+
+        let content = serde_json::to_string_pretty(history)?;
+        let tmp_path = path.with_extension("tmp");
+        let mut file = fs::File::create(&tmp_path)?;
+        file.write_all(content.as_bytes())?;
+        file.sync_all()?;
+        
+        fs::rename(tmp_path, path)?;
+        Ok(())
+    }
+
     pub fn add_task(&mut self, task: Task) {
         let event = LogEvent::new(EventAction::Created, task.id, format!("Created task: {}", task.title));
         let _ = append_log(&event);
@@ -71,15 +109,6 @@ impl TaskStore {
         false
     }
 
-    // Keep this for CLI explicit 'done' command if needed, or just use toggle?
-    // CLI 'done' usually implies idempotent 'make it done'.
-    // Let's keep a separate explicit complete if we want strictness, but for now I'll replace it 
-    // or add a new one. The user asked for "double click on done undone", which is toggle.
-    // I'll rename the existing one to `complete_task` (keep it) and add `toggle_complete_task`?
-    // Actually, let's just modify `complete_task` to be `toggle_complete_task`?
-    // No, `eq done` in CLI should probably not undo if run twice.
-    // So I will ADD `toggle_completion` and keep `complete_task` (idempotent).
-    
     pub fn complete_task(&mut self, id: Uuid) -> bool {
         if let Some(task) = self.tasks.iter_mut().find(|t| t.id == id) {
             if task.status != TaskStatus::Completed {
@@ -128,5 +157,28 @@ impl TaskStore {
             return true;
         }
         false
+    }
+
+    /// Find a task by ID prefix or index (Fix #6 - simplified)
+    pub fn find_task_id(&self, id_or_index: &str, filter_date: Option<NaiveDate>) -> Option<Uuid> {
+        // Try to parse as 1-based index
+        if let Ok(idx) = id_or_index.parse::<usize>() {
+            let mut tasks: Vec<&Task> = self.tasks.iter()
+                .filter(|t| {
+                    t.status == TaskStatus::Pending && 
+                    filter_date.map_or(true, |d| t.date == d)
+                })
+                .collect();
+            tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+            
+            if idx > 0 && idx <= tasks.len() {
+                return Some(tasks[idx - 1].id);
+            }
+        }
+        
+        // Fallback to UUID prefix match
+        self.tasks.iter()
+            .find(|t| t.id.to_string().starts_with(id_or_index))
+            .map(|t| t.id)
     }
 }

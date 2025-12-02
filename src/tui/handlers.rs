@@ -1,4 +1,4 @@
-use crossterm::event::{Event, KeyCode, KeyEvent};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
 use crate::tui::app::{App, CurrentScreen};
 use crate::models::task::{Task, Quadrant, TaskStatus};
 use crate::ai::{ChatMessage, AIResponse};
@@ -16,6 +16,7 @@ pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
                         role: "assistant".to_string(),
                         content,
                     });
+                    app.save_chat_history();
                 }
                 AIResponse::Error(err) => {
                     app.chat_history.push(ChatMessage {
@@ -44,10 +45,6 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
     match key.code {
         KeyCode::Char('q') => return Some(true),
         KeyCode::Char('c') => {
-            use std::io::Write;
-            if let Ok(mut file) = std::fs::OpenOptions::new().create(true).append(true).open("debug.log") {
-                writeln!(file, "Pressed 'c', switching to Chat").unwrap();
-            }
             app.current_screen = CurrentScreen::Chat;
         }
         KeyCode::Char('?') => {
@@ -74,12 +71,16 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
             if let Some(task_id) = get_selected_task_id(app) {
                 app.store.toggle_complete_task(task_id);
                 let _ = app.store.save();
+                // Fix #4: Clamp index after mutation
+                app.clamp_selected_index();
             }
         }
         KeyCode::Char('x') => {
             if let Some(task_id) = get_selected_task_id(app) {
                 app.store.drop_task(task_id);
                 let _ = app.store.save();
+                // Fix #4: Clamp index after mutation
+                app.clamp_selected_index();
             }
         }
         KeyCode::Char('t') => {
@@ -88,11 +89,15 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
             } else {
                 chrono::Local::now().date_naive()
             };
+            // Fix #4: Clamp index when switching views
+            app.clamp_selected_index();
         }
         KeyCode::Char('>') | KeyCode::Char('.') => {
             if let Some(task_id) = get_selected_task_id(app) {
                 app.store.move_task_to_date(task_id, app.view_date + chrono::Duration::days(1));
                 let _ = app.store.save();
+                // Fix #4: Clamp index after mutation
+                app.clamp_selected_index();
             }
         }
         KeyCode::Tab => {
@@ -102,7 +107,9 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 Quadrant::Delegate => Quadrant::Drop,
                 Quadrant::Drop => Quadrant::DoFirst,
             };
+            // Fix #4: Reset and clamp index when switching quadrants
             app.selected_task_index = 0;
+            app.clamp_selected_index();
         }
         KeyCode::Down | KeyCode::Char('j') => {
             let count = get_task_count(app);
@@ -127,7 +134,9 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 Quadrant::Drop => Quadrant::Delegate,
                 _ => app.selected_quadrant,
             };
+            // Fix #4: Reset and clamp index
             app.selected_task_index = 0;
+            app.clamp_selected_index();
         }
         KeyCode::Right | KeyCode::Char('l') => {
             app.selected_quadrant = match app.selected_quadrant {
@@ -135,7 +144,9 @@ fn handle_main_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 Quadrant::Delegate => Quadrant::Drop,
                 _ => app.selected_quadrant,
             };
+            // Fix #4: Reset and clamp index
             app.selected_task_index = 0;
+            app.clamp_selected_index();
         }
         _ => {}
     }
@@ -173,6 +184,8 @@ fn handle_editing_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
             app.input_buffer.clear();
             app.input_mode = false;
             app.current_screen = CurrentScreen::Main;
+            // Fix #4: Clamp after adding/editing
+            app.clamp_selected_index();
         }
         KeyCode::Esc => {
             app.input_buffer.clear();
@@ -195,9 +208,56 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
     match key.code {
         KeyCode::Esc => {
             app.current_screen = CurrentScreen::Main;
+            // Fix #8: Save chat on exit
+            app.save_chat_history();
         }
 
-        KeyCode::Char('w') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+        // Fix #5: Toggle chat help
+        KeyCode::Char('?') if app.chat_input.is_empty() => {
+            app.show_chat_help = !app.show_chat_help;
+        }
+
+        // Fix #1: Scroll up in chat history
+        KeyCode::PageUp => {
+            app.chat_auto_scroll = false;
+            if app.chat_scroll > 5 {
+                app.chat_scroll -= 5;
+            } else {
+                app.chat_scroll = 0;
+            }
+        }
+
+        // Fix #1: Scroll down in chat history
+        KeyCode::PageDown => {
+            app.chat_scroll += 5;
+            // Will be clamped in ui.rs
+        }
+
+        // Fix #1: Scroll up with Ctrl+K
+        KeyCode::Char('k') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.chat_auto_scroll = false;
+            if app.chat_scroll > 0 {
+                app.chat_scroll -= 1;
+            }
+        }
+
+        // Fix #1: Scroll down with Ctrl+J
+        KeyCode::Char('j') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.chat_scroll += 1;
+        }
+
+        // Fix #1: Jump to bottom (resume auto-scroll)
+        KeyCode::End => {
+            app.chat_auto_scroll = true;
+        }
+
+        // Fix #1: Jump to top
+        KeyCode::Home => {
+            app.chat_auto_scroll = false;
+            app.chat_scroll = 0;
+        }
+
+        KeyCode::Char('w') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             // Delete word
             if let Some(last_space) = app.chat_input.trim_end().rfind(' ') {
                 app.chat_input.truncate(last_space + 1);
@@ -205,7 +265,7 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 app.chat_input.clear();
             }
         }
-        KeyCode::Backspace if key.modifiers.contains(crossterm::event::KeyModifiers::ALT) => {
+        KeyCode::Backspace if key.modifiers.contains(KeyModifiers::ALT) => {
             // Delete word (Alt+Backspace)
             if let Some(last_space) = app.chat_input.trim_end().rfind(' ') {
                 app.chat_input.truncate(last_space + 1);
@@ -213,10 +273,18 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                 app.chat_input.clear();
             }
         }
-        KeyCode::Char('u') if key.modifiers.contains(crossterm::event::KeyModifiers::CONTROL) => {
+        KeyCode::Char('u') if key.modifiers.contains(KeyModifiers::CONTROL) => {
             // Delete line
             app.chat_input.clear();
         }
+
+        // Clear chat history
+        KeyCode::Char('l') if key.modifiers.contains(KeyModifiers::CONTROL) => {
+            app.chat_history.clear();
+            app.chat_scroll = 0;
+            app.save_chat_history();
+        }
+
         KeyCode::Enter => {
             if !app.chat_input.trim().is_empty() {
                 let content = app.chat_input.trim().to_string();
@@ -225,17 +293,17 @@ fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
                     content: content.clone(),
                 });
                 
+                // Save after user message
+                app.save_chat_history();
+                
                 // Send to AI
                 if let Some(client) = &app.ai_client {
                     let (tx, rx) = mpsc::channel();
                     app.chat_receiver = Some(rx);
                     app.is_loading = true;
-                    // Reset auto-scroll to true when sending a message
                     app.chat_auto_scroll = true;
                     
-                    // Serialize tasks for context
                     let context = serde_json::to_string_pretty(&app.store.tasks).unwrap_or_default();
-                    
                     client.send_message(app.chat_history.clone(), context, tx);
                 } else {
                     app.chat_history.push(ChatMessage {

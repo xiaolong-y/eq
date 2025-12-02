@@ -6,9 +6,7 @@ use crossterm::{
 };
 use ratatui::{backend::CrosstermBackend, Terminal};
 use crate::models::store::TaskStore;
-use crate::models::task::Quadrant;
-use crate::tui::ui::ui;
-use crate::tui::handlers::handle_key_events;
+use crate::models::task::{Quadrant, TaskStatus};
 use chrono::{Local, NaiveDate, Duration};
 
 use crate::ai::{AIClient, ChatMessage, AIResponse};
@@ -25,7 +23,7 @@ pub struct App<'a> {
     pub store: &'a mut TaskStore,
     pub current_screen: CurrentScreen,
     pub selected_quadrant: Quadrant,
-    pub selected_task_index: usize, // Index within the filtered quadrant list
+    pub selected_task_index: usize,
     pub view_date: NaiveDate,
     pub input_buffer: String,
     pub input_mode: bool,
@@ -40,10 +38,17 @@ pub struct App<'a> {
     pub is_loading: bool,
     pub chat_scroll: u16,
     pub chat_auto_scroll: bool,
+    pub show_chat_help: bool, // Fix #5: Chat help toggle
 }
 
 impl<'a> App<'a> {
     pub fn new(store: &'a mut TaskStore) -> App<'a> {
+        // Fix #8: Load persisted chat history
+        let saved_history = TaskStore::load_chat_history();
+        let chat_history: Vec<ChatMessage> = saved_history.into_iter()
+            .map(|m| ChatMessage { role: m.role, content: m.content })
+            .collect();
+        
         App {
             store,
             current_screen: CurrentScreen::Main,
@@ -55,13 +60,14 @@ impl<'a> App<'a> {
             editing_task_id: None,
             show_help: false,
             
-            chat_history: Vec::new(),
+            chat_history,
             chat_input: String::new(),
             ai_client: AIClient::new(),
             chat_receiver: None,
             is_loading: false,
             chat_scroll: 0,
             chat_auto_scroll: true,
+            show_chat_help: false,
         }
     }
 
@@ -72,6 +78,38 @@ impl<'a> App<'a> {
         } else {
             self.view_date = today;
         }
+    }
+
+    /// Fix #4: Get task count for current quadrant and clamp index if needed
+    pub fn get_current_task_count(&self) -> usize {
+        self.store.tasks.iter()
+            .filter(|t| {
+                t.date == self.view_date 
+                && t.status != TaskStatus::Dropped 
+                && t.quadrant() == self.selected_quadrant
+            })
+            .count()
+    }
+
+    /// Fix #4: Clamp the selected index to valid range
+    pub fn clamp_selected_index(&mut self) {
+        let count = self.get_current_task_count();
+        if count == 0 {
+            self.selected_task_index = 0;
+        } else if self.selected_task_index >= count {
+            self.selected_task_index = count - 1;
+        }
+    }
+
+    /// Fix #8: Save chat history to disk
+    pub fn save_chat_history(&self) {
+        let history: Vec<crate::models::store::ChatMessage> = self.chat_history.iter()
+            .map(|m| crate::models::store::ChatMessage { 
+                role: m.role.clone(), 
+                content: m.content.clone() 
+            })
+            .collect();
+        let _ = TaskStore::save_chat_history(&history);
     }
 }
 
@@ -88,6 +126,9 @@ pub fn run(store: &mut TaskStore) -> Result<(), Box<dyn std::error::Error>> {
 
     // Run loop
     let res = run_app(&mut terminal, &mut app);
+
+    // Fix #8: Save chat history on exit
+    app.save_chat_history();
 
     // Restore terminal
     disable_raw_mode()?;
@@ -109,9 +150,9 @@ fn run_app<B: ratatui::backend::Backend>(
     app: &mut App,
 ) -> io::Result<()> {
     loop {
-        terminal.draw(|f| ui(f, app))?;
+        terminal.draw(|f| crate::tui::ui::ui(f, app))?;
 
-        // Poll for AI responses (also done in handle_key_events, but we need it here for async updates)
+        // Poll for AI responses
         if let Some(receiver) = &app.chat_receiver {
             if let Ok(response) = receiver.try_recv() {
                 app.is_loading = false;
@@ -121,6 +162,8 @@ fn run_app<B: ratatui::backend::Backend>(
                             role: "assistant".to_string(),
                             content,
                         });
+                        // Fix #8: Auto-save after AI response
+                        app.save_chat_history();
                     }
                     AIResponse::Error(err) => {
                         app.chat_history.push(ChatMessage {
@@ -134,7 +177,7 @@ fn run_app<B: ratatui::backend::Backend>(
 
         if event::poll(std::time::Duration::from_millis(100))? {
             let event = event::read()?;
-            if let Some(res) = handle_key_events(event, app) {
+            if let Some(res) = crate::tui::handlers::handle_key_events(event, app) {
                 if res {
                     return Ok(());
                 }

@@ -1,10 +1,11 @@
 use clap::Parser;
 use eq::cli::{Cli, Commands};
 use eq::models::store::TaskStore;
-use eq::models::task::Task;
+use eq::models::task::{Task, Quadrant, TaskStatus};
 use eq::parser::input::parse_priority;
-use chrono::{Local, NaiveDate, Duration};
+use chrono::{Local, NaiveDate, Duration, Weekday, Datelike};
 use std::error::Error;
+use std::collections::HashMap;
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Load .env file from current directory
@@ -41,8 +42,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             store.save()?;
         }
         Some(Commands::Done { id }) => {
-            if let Some(task) = find_task(&mut store, id) {
-                let task_id = task.id;
+            let today = Local::now().date_naive();
+            if let Some(task_id) = store.find_task_id(id, Some(today)) {
                 store.complete_task(task_id);
                 println!("Marked task as done: {}", id);
                 store.save()?;
@@ -51,8 +52,8 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         Some(Commands::Drop { id }) => {
-            if let Some(task) = find_task(&mut store, id) {
-                let task_id = task.id;
+            let today = Local::now().date_naive();
+            if let Some(task_id) = store.find_task_id(id, Some(today)) {
                 store.drop_task(task_id);
                 println!("Dropped task: {}", id);
                 store.save()?;
@@ -61,11 +62,16 @@ fn main() -> Result<(), Box<dyn Error>> {
             }
         }
         Some(Commands::Edit { id, args }) => {
-            if let Some(task) = find_task(&mut store, id) {
-                let task_id = task.id;
-                let current_title = task.title.clone();
-                let mut urgency = task.urgency;
-                let mut importance = task.importance;
+            let today = Local::now().date_naive();
+            if let Some(task_id) = store.find_task_id(id, Some(today)) {
+                // Get current task info
+                let (current_title, current_u, current_i) = {
+                    let task = store.tasks.iter().find(|t| t.id == task_id).unwrap();
+                    (task.title.clone(), task.urgency, task.importance)
+                };
+                
+                let mut urgency = current_u;
+                let mut importance = current_i;
                 
                 let input = args.join(" ");
                 if let Some((u, i)) = parse_priority(&input) {
@@ -87,7 +93,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             print_matrix(&store, Local::now().date_naive() + Duration::days(1));
         }
         Some(Commands::Week) => {
-            println!("Weekly view not implemented in CLI yet.");
+            print_week(&store);
         }
         Some(Commands::Tui) => {
             eq::tui::app::run(&mut store)?;
@@ -101,11 +107,8 @@ fn main() -> Result<(), Box<dyn Error>> {
 }
 
 fn print_stats(store: &TaskStore) {
-    use std::collections::HashMap;
-    use eq::models::task::{Quadrant, TaskStatus};
-
     let mut counts: HashMap<Quadrant, usize> = HashMap::new();
-    let mut durations: HashMap<Quadrant, i64> = HashMap::new(); // Total seconds
+    let mut durations: HashMap<Quadrant, i64> = HashMap::new();
 
     for task in &store.tasks {
         if task.status == TaskStatus::Completed {
@@ -132,8 +135,6 @@ fn print_stats(store: &TaskStore) {
     }
 
     println!("\nAvg Time to Complete (Seconds):");
-    let _max_duration = durations.values().max().copied().unwrap_or(0); // This is total, need avg for chart? 
-    // Let's chart Average Duration
     
     let mut avgs = HashMap::new();
     for q in &quadrants {
@@ -154,46 +155,10 @@ fn print_stats(store: &TaskStore) {
     println!();
 }
 
-fn find_task<'a>(store: &'a mut TaskStore, id: &str) -> Option<&'a mut Task> {
-    // Try to parse as index (1-based)
-    if let Ok(idx) = id.parse::<usize>() {
-        // This is tricky because indices depend on the view.
-        // For CLI, we might need a way to map visual index to ID.
-        // For now, let's assume UUID prefix or exact match if not number.
-        // But the prompt examples use "eq done 3".
-        // This implies we need a stable sort or the user is looking at a list.
-        // Let's just support UUID prefix for now to be safe, or implement a lookup.
-        // Actually, without a stateful view, index-based access is dangerous in CLI.
-        // But let's try to match the "Today" view order.
-        let today = Local::now().date_naive();
-        let mut tasks: Vec<&mut Task> = store.tasks.iter_mut()
-            .filter(|t| t.date == today && t.status == eq::models::task::TaskStatus::Pending)
-            .collect();
-        
-        tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
-        
-        if idx > 0 && idx <= tasks.len() {
-            // This is a bit unsafe if the list changed, but standard for CLI tools.
-            // We need to find the task with the same ID in the real store.
-            // Since we have mutable references, we can't easily return one from the filtered list 
-            // and then use it because of borrowing rules if we constructed a new vector.
-            // Let's just find the ID first.
-            let target_id = tasks[idx-1].id;
-            return store.tasks.iter_mut().find(|t| t.id == target_id);
-        }
-    }
-    
-    // Fallback to UUID prefix
-    store.tasks.iter_mut().find(|t| t.id.to_string().starts_with(id))
-}
-
-
-
 fn print_matrix(store: &TaskStore, date: NaiveDate) {
     println!("Eisenhower Matrix for {}", date);
-    // Filter and sort
     let mut tasks: Vec<&Task> = store.tasks.iter()
-        .filter(|t| t.date == date && t.status == eq::models::task::TaskStatus::Pending)
+        .filter(|t| t.date == date && t.status == TaskStatus::Pending)
         .collect();
     tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
 
@@ -204,5 +169,59 @@ fn print_matrix(store: &TaskStore, date: NaiveDate) {
 
     for (i, task) in tasks.iter().enumerate() {
         println!("{}. [{}] {} (Score: {})", i + 1, task.quadrant(), task.title, task.score());
+    }
+}
+
+/// Fix #7: Week view implementation
+fn print_week(store: &TaskStore) {
+    let today = Local::now().date_naive();
+    
+    // Find start of week (Monday)
+    let days_since_monday = today.weekday().num_days_from_monday();
+    let week_start = today - Duration::days(days_since_monday as i64);
+    
+    println!("\n📅 Week Overview ({} - {})\n", 
+        week_start.format("%b %d"),
+        (week_start + Duration::days(6)).format("%b %d"));
+    
+    let weekdays = [
+        Weekday::Mon, Weekday::Tue, Weekday::Wed, 
+        Weekday::Thu, Weekday::Fri, Weekday::Sat, Weekday::Sun
+    ];
+    
+    for (i, _weekday) in weekdays.iter().enumerate() {
+        let date = week_start + Duration::days(i as i64);
+        let is_today = date == today;
+        
+        let mut tasks: Vec<&Task> = store.tasks.iter()
+            .filter(|t| t.date == date && t.status == TaskStatus::Pending)
+            .collect();
+        tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+        
+        let completed: Vec<&Task> = store.tasks.iter()
+            .filter(|t| t.date == date && t.status == TaskStatus::Completed)
+            .collect();
+        
+        let marker = if is_today { "→" } else { " " };
+        let day_name = date.format("%a %b %d").to_string();
+        
+        println!("{} {} ({} pending, {} done)", 
+            marker, day_name, tasks.len(), completed.len());
+        
+        // Show top 3 tasks for each day
+        for task in tasks.iter().take(3) {
+            let quadrant_icon = match task.quadrant() {
+                Quadrant::DoFirst => "🔴",
+                Quadrant::Schedule => "🔵",
+                Quadrant::Delegate => "🟡",
+                Quadrant::Drop => "⚪",
+            };
+            println!("    {} {}", quadrant_icon, task.title);
+        }
+        
+        if tasks.len() > 3 {
+            println!("    ... and {} more", tasks.len() - 3);
+        }
+        println!();
     }
 }

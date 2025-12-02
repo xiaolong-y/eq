@@ -6,6 +6,7 @@
 
 ### Prerequisites
 - Rust toolchain (`cargo`)
+- (Optional) OpenAI API key for AI chat features
 
 ### Build & Install
 To run `eq` from anywhere:
@@ -21,6 +22,12 @@ To run `eq` from anywhere:
     export PATH="$HOME/.cargo/bin:$PATH"
     ```
     Then run `source ~/.zshrc`.
+
+3.  **(Optional) Set up AI Chat**:
+    Create a `.env` file in your working directory:
+    ```bash
+    OPENAI_API_KEY=your-api-key-here
+    ```
 
 Now you can just run:
 ```bash
@@ -70,6 +77,19 @@ Launch with: `eq tui`
 - **`>`** / **`.`**: **Move** task to Tomorrow.
 - **`t`**: Toggle view between **Today** and **Tomorrow**.
 - **`?`**: Toggle help / wisdom.
+- **`c`**: Open **AI Chat** interface.
+
+### AI Chat Interface
+- **`Enter`**: Send message.
+- **`Esc`**: Close chat.
+- **`PgUp` / `PgDn`**: Scroll chat history.
+- **`Ctrl+K` / `Ctrl+J`**: Scroll one line.
+- **`Home`**: Jump to top.
+- **`End`**: Resume auto-scroll.
+- **`Ctrl+L`**: Clear chat history.
+- **`Ctrl+W`**: Delete word.
+- **`Ctrl+U`**: Clear input line.
+- **`?`**: Toggle help (when input is empty).
 
 ---
 
@@ -89,9 +109,11 @@ eq add "Call Mom" --tomorrow      # Schedule for tomorrow
 ```bash
 eq today              # View today's matrix
 eq tomorrow           # View tomorrow's matrix
+eq week               # View weekly overview
 eq done <id>          # Mark as complete
 eq drop <id>          # Delete task
 eq edit <id> u3i1     # Update priority
+eq stats              # Show productivity statistics
 ```
 
 ---
@@ -99,8 +121,9 @@ eq edit <id> u3i1     # Update priority
 ## 💾 Data & Logging
 
 ### Storage
-Tasks are stored in a `data` subdirectory relative to where you run the command (or the project root if running locally):
-- **Location**: `./data/tasks.json`
+Tasks are stored in a `data` subdirectory relative to where you run the command:
+- **Tasks**: `./data/tasks.json`
+- **Chat History**: `./data/chat_history.json` (persisted across sessions)
 
 ### Event Log
 - **Location**: `./data/history.jsonl`
@@ -109,3 +132,15 @@ Tasks are stored in a `data` subdirectory relative to where you run the command 
 ```json
 {"id":"...","timestamp":"...","action":"Created","task_id":"...","details":"Created task: Buy milk"}
 ```
+
+---
+
+## 🛠️ Recent Improvements
+
+- **Chat Scrolling**: Navigate chat history with PgUp/PgDn, Ctrl+K/J
+- **Cursor Visibility**: Input cursor now visible in chat and task editing
+- **Index Stability**: Selection doesn't break after completing/dropping tasks
+- **Persistent Chat**: Chat history saved between sessions
+- **Week View**: See your entire week at a glance with `eq week`
+- **Improved Parser**: Edge cases like `ui` without numbers handled gracefully
+- **Cleaner Codebase**: Refactored widget system, simplified task lookup

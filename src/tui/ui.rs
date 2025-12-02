@@ -1,14 +1,13 @@
 use ratatui::{
-    layout::{Alignment, Constraint, Direction, Layout},
+    layout::{Alignment, Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
-    text::Line,
-    widgets::{Block, Borders, Paragraph, Widget},
+    text::{Line, Span},
+    widgets::{Block, Borders, Clear, Paragraph, Widget},
     Frame,
 };
-use crate::tui::app::App;
+use crate::tui::app::{App, CurrentScreen};
+use crate::tui::widgets::quadrant::QuadrantWidget;
 use crate::models::task::{Quadrant, TaskStatus};
-
-
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
@@ -21,9 +20,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(f.area());
 
     // Header
-    let _titles = ["TODAY", "tomorrow"];
     let date_str = app.view_date.format("%a %b %d").to_string();
-    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}   [?] [q]", date_str);
+    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}   [c]hat [?] [q]", date_str);
     
     let header = Paragraph::new(header_text)
         .block(Block::default().borders(Borders::ALL))
@@ -51,87 +49,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .filter(|t| t.date == app.view_date && t.status != TaskStatus::Dropped)
         .collect();
 
-    // Helper to render quadrant
-    let render_quad = |q: Quadrant, area: ratatui::layout::Rect, buf: &mut ratatui::buffer::Buffer| {
-        let mut q_tasks: Vec<_> = tasks.iter()
-            .filter(|t| t.quadrant() == q)
-            .collect();
-        
-        q_tasks.sort_by_key(|b| std::cmp::Reverse(b.score()));
-
-        let is_active = app.selected_quadrant == q;
-        
-        // Custom rendering to handle selection highlight
-        // We can't easily use the Widget trait if we need complex state logic inside render unless we pass it.
-        // Let's manually render using the widget we created but we need to handle the selected item highlight.
-        // The widget I wrote earlier was a bit too simple. Let's just inline the logic here or update the widget.
-        // For now, let's just use Block and Paragraph for simplicity in this file, or update the widget.
-        // I'll update the widget logic in my head: I'll just render manually here to ensure control.
-        
-        let border_style = if is_active && !app.input_mode {
-            Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::DarkGray)
-        };
-
-        let block = Block::default()
-            .title(format!(" {} ", q))
-            .borders(Borders::ALL)
-            .border_style(border_style);
-            
-        block.render(area, buf);
-        
-        let inner = ratatui::layout::Rect {
-            x: area.x + 1,
-            y: area.y + 1,
-            width: area.width.saturating_sub(2),
-            height: area.height.saturating_sub(2),
-        };
-
-        // Calculate scroll offset to ensure selected task is visible
-        let height = inner.height as usize;
-        let start_index = if is_active {
-            if app.selected_task_index >= height {
-                app.selected_task_index - height + 1
-            } else {
-                0
-            }
-        } else {
-            0
-        };
-
-        for (i, task) in q_tasks.iter().enumerate().skip(start_index) {
-            let render_index = i - start_index;
-            if render_index >= height { break; }
-            
-            let mut style = Style::default();
-            let mut prefix = "  ";
-            
-            if is_active && i == app.selected_task_index {
-                style = style.add_modifier(Modifier::BOLD);
-                prefix = "› ";
-            }
-            
-            if task.status == TaskStatus::Completed {
-                style = style.fg(Color::DarkGray).add_modifier(Modifier::CROSSED_OUT);
-            } else {
-                 match q {
-                    Quadrant::DoFirst => style = style.fg(Color::Red),
-                    Quadrant::Schedule => style = style.fg(Color::Blue),
-                    Quadrant::Delegate => style = style.fg(Color::Yellow),
-                    Quadrant::Drop => style = style.fg(Color::Gray),
-                }
-            }
-
-            let content = format!("{}{:<width$} [{}]", prefix, task.title, task.score(), width = (inner.width as usize).saturating_sub(8));
-            buf.set_string(inner.x, inner.y + render_index as u16, content, style);
-        }
-    };
-
-    render_quad(Quadrant::DoFirst, top_row[0], f.buffer_mut());
-    render_quad(Quadrant::Schedule, top_row[1], f.buffer_mut());
-    render_quad(Quadrant::Delegate, bottom_row[0], f.buffer_mut());
-    render_quad(Quadrant::Drop, bottom_row[1], f.buffer_mut());
+    // Fix #3: Use QuadrantWidget for rendering
+    render_quadrant(f, Quadrant::DoFirst, top_row[0], &tasks, app);
+    render_quadrant(f, Quadrant::Schedule, top_row[1], &tasks, app);
+    render_quadrant(f, Quadrant::Delegate, bottom_row[0], &tasks, app);
+    render_quadrant(f, Quadrant::Drop, bottom_row[1], &tasks, app);
 
     // Footer / Input
     if app.input_mode {
@@ -139,8 +61,13 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .style(Style::default().fg(Color::Yellow))
             .block(Block::default().borders(Borders::ALL).title(" Input "));
         f.render_widget(input, chunks[2]);
+        
+        // Show cursor for input
+        let x = chunks[2].x + 11 + app.input_buffer.len() as u16;
+        let y = chunks[2].y + 1;
+        f.set_cursor_position((x.min(chunks[2].right() - 2), y));
     } else {
-        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [e]dit  [>]move  [↑↓←→]navigate  [tab]quadrant  [t]omorrow  [q]uit")
+        let help = Paragraph::new("[a]dd  [d]one  [x]drop  [e]dit  [>]move  [↑↓←→]navigate  [tab]quadrant  [t]omorrow  [c]hat  [q]uit")
             .style(Style::default().fg(Color::DarkGray))
             .alignment(Alignment::Center)
             .block(Block::default().borders(Borders::TOP));
@@ -157,116 +84,173 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .alignment(Alignment::Center)
             .wrap(ratatui::widgets::Wrap { trim: true });
         
-        // Clear the background of the popup
-        f.render_widget(ratatui::widgets::Clear, area);
+        f.render_widget(Clear, area);
         f.render_widget(popup, area);
     }
 
     // Chat UI
-    if let crate::tui::app::CurrentScreen::Chat = app.current_screen {
-        let area = centered_rect(80, 80, f.area());
-        f.render_widget(ratatui::widgets::Clear, area);
-        
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([
-                Constraint::Min(0),
-                Constraint::Length(3),
-            ].as_ref())
-            .split(area);
-
-        let block = Block::default().borders(Borders::ALL).title(" Your friendly neighbor - chatgpt");
-        f.render_widget(block, area);
-
-        // Messages
-        let mut messages_text = Vec::new();
-        for msg in &app.chat_history {
-            let role = if msg.role == "user" { "You" } else { "Chat" };
-            let color = if msg.role == "user" { Color::Yellow } else { Color::Cyan };
-            messages_text.push(Line::from(vec![
-                ratatui::text::Span::styled(format!("{}: ", role), Style::default().fg(color).add_modifier(Modifier::BOLD)),
-                ratatui::text::Span::raw(&msg.content),
-            ]));
-            messages_text.push(Line::from("")); // Spacing
-        }
-        
-        if app.is_loading {
-             messages_text.push(Line::from(ratatui::text::Span::styled("Minding your business...", Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC))));
-        }
-
-        // Scroll to bottom (basic implementation: take last N lines)
-        // For a proper scroll, we'd need state, but let's just show what fits or last few.
-        // Paragraph handles wrapping but not auto-scroll to bottom easily without offset state.
-        // We'll just render it and hope it fits or user scrolls (we haven't implemented scroll keys for chat yet).
-        // Let's just render all and let it clip top if too long (default behavior is clip bottom usually).
-        // Actually, let's reverse it visually or just render.
-        
-        let messages_area = chunks[0].inner(ratatui::layout::Margin { vertical: 1, horizontal: 1 });
-        
-        // Calculate total height needed
-        let width = messages_area.width as usize;
-        let mut total_lines = 0;
-        for msg in &app.chat_history {
-            // Role line
-            total_lines += 1; 
-            // Content lines
-            let wrapped = textwrap::wrap(&msg.content, width);
-            total_lines += wrapped.len();
-            // Spacing
-            total_lines += 1;
-        }
-        if app.is_loading {
-            total_lines += 1;
-        }
-
-        let height = messages_area.height as usize;
-        let max_scroll = if total_lines > height {
-            (total_lines - height) as u16
-        } else {
-            0
-        };
-
-        if app.chat_auto_scroll {
-            app.chat_scroll = max_scroll;
-        } else {
-            // Clamp scroll
-            if app.chat_scroll > max_scroll {
-                app.chat_scroll = max_scroll;
-            }
-        }
-
-        let messages = Paragraph::new(messages_text)
-            .wrap(ratatui::widgets::Wrap { trim: true })
-            .scroll((app.chat_scroll, 0));
-            
-        f.render_widget(messages, messages_area);
-
-        // Input
-        let input_area = chunks[1].inner(ratatui::layout::Margin { vertical: 0, horizontal: 1 });
-        let input_width = input_area.width as usize;
-        
-        // Calculate input lines and cursor position
-        let input_lines = textwrap::wrap(&app.chat_input, input_width);
-        let total_input_lines = input_lines.len();
-        
-        // Account for Borders::TOP (1 line)
-        let input_height = (input_area.height as usize).saturating_sub(1);
-        let input_scroll = if total_input_lines > input_height {
-            (total_input_lines - input_height) as u16
-        } else {
-            0
-        };
-
-        let input = Paragraph::new(app.chat_input.as_str())
-            .style(Style::default().fg(Color::White))
-            .block(Block::default().borders(Borders::TOP).title(" Message "))
-            .wrap(ratatui::widgets::Wrap { trim: false })
-            .scroll((input_scroll, 0));
-        f.render_widget(input, input_area);
+    if let CurrentScreen::Chat = app.current_screen {
+        render_chat(f, app);
     }
 }
 
-fn centered_rect(percent_x: u16, percent_y: u16, r: ratatui::layout::Rect) -> ratatui::layout::Rect {
+/// Fix #3: Refactored to use QuadrantWidget
+fn render_quadrant(
+    f: &mut Frame,
+    q: Quadrant,
+    area: Rect,
+    all_tasks: &[&crate::models::task::Task],
+    app: &App,
+) {
+    let mut q_tasks: Vec<_> = all_tasks.iter()
+        .filter(|t| t.quadrant() == q)
+        .cloned()
+        .collect();
+    q_tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+
+    let is_active = app.selected_quadrant == q && !app.input_mode;
+    let selected_idx = if is_active { Some(app.selected_task_index) } else { None };
+
+    let widget = QuadrantWidget::new(q_tasks, is_active, q, selected_idx);
+    f.render_widget(widget, area);
+}
+
+fn render_chat(f: &mut Frame, app: &mut App) {
+    let area = centered_rect(80, 80, f.area());
+    f.render_widget(Clear, area);
+    
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([
+            Constraint::Min(0),
+            Constraint::Length(3),
+        ].as_ref())
+        .split(area);
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .title(" AI Chat (Esc to close) ");
+    f.render_widget(block, area);
+
+    // Messages area
+    let messages_area = chunks[0].inner(ratatui::layout::Margin { vertical: 1, horizontal: 1 });
+    
+    // Build message lines with wrapping
+    let width = messages_area.width as usize;
+    let mut lines: Vec<Line> = Vec::new();
+    
+    for msg in &app.chat_history {
+        let (role, color) = if msg.role == "user" { 
+            ("You", Color::Yellow) 
+        } else { 
+            ("AI", Color::Cyan) 
+        };
+        
+        // Role header
+        lines.push(Line::from(Span::styled(
+            format!("{}:", role),
+            Style::default().fg(color).add_modifier(Modifier::BOLD)
+        )));
+        
+        // Wrap content
+        let wrapped = textwrap::wrap(&msg.content, width.saturating_sub(2));
+        for line in wrapped {
+            lines.push(Line::from(Span::raw(format!("  {}", line))));
+        }
+        lines.push(Line::from("")); // Spacing
+    }
+    
+    if app.is_loading {
+        lines.push(Line::from(Span::styled(
+            "Thinking...",
+            Style::default().fg(Color::Gray).add_modifier(Modifier::ITALIC)
+        )));
+    }
+
+    // Calculate scroll
+    let height = messages_area.height as usize;
+    let total_lines = lines.len();
+    let max_scroll = if total_lines > height {
+        (total_lines - height) as u16
+    } else {
+        0
+    };
+
+    if app.chat_auto_scroll {
+        app.chat_scroll = max_scroll;
+    } else if app.chat_scroll > max_scroll {
+        app.chat_scroll = max_scroll;
+    }
+
+    let messages = Paragraph::new(lines)
+        .scroll((app.chat_scroll, 0));
+    f.render_widget(messages, messages_area);
+
+    // Scroll indicator
+    if max_scroll > 0 {
+        let scroll_pct = if max_scroll > 0 {
+            (app.chat_scroll as f32 / max_scroll as f32 * 100.0) as u16
+        } else {
+            100
+        };
+        let indicator = if app.chat_auto_scroll {
+            String::from("AUTO")
+        } else {
+            format!("{}%", scroll_pct)
+        };
+        let indicator_span = Span::styled(
+            indicator,
+            Style::default().fg(Color::DarkGray)
+        );
+        let x = messages_area.right().saturating_sub(6);
+        let y = messages_area.top();
+        f.buffer_mut().set_span(x, y, &indicator_span, 6);
+    }
+
+    // Input area
+    let input_area = chunks[1].inner(ratatui::layout::Margin { vertical: 0, horizontal: 1 });
+    let input_block = Block::default()
+        .borders(Borders::TOP)
+        .title(" Message (PgUp/PgDn to scroll, Ctrl+L clear) ");
+    
+    let input = Paragraph::new(app.chat_input.as_str())
+        .style(Style::default().fg(Color::White))
+        .block(input_block);
+    f.render_widget(input, input_area);
+
+    // Fix #5: Show cursor in chat input
+    let cursor_x = input_area.x + app.chat_input.len() as u16;
+    let cursor_y = input_area.y + 1;
+    f.set_cursor_position((cursor_x.min(input_area.right() - 1), cursor_y));
+
+    // Fix #5: Chat help overlay
+    if app.show_chat_help {
+        let help_area = centered_rect(50, 40, f.area());
+        f.render_widget(Clear, help_area);
+        
+        let help_text = vec![
+            Line::from(Span::styled("Chat Keyboard Shortcuts", Style::default().add_modifier(Modifier::BOLD))),
+            Line::from(""),
+            Line::from("PgUp/PgDn    Scroll history"),
+            Line::from("Ctrl+K/J     Scroll one line"),
+            Line::from("Home         Jump to top"),
+            Line::from("End          Resume auto-scroll"),
+            Line::from("Ctrl+L       Clear chat history"),
+            Line::from("Ctrl+W       Delete word"),
+            Line::from("Ctrl+U       Clear input"),
+            Line::from("Esc          Close chat"),
+            Line::from(""),
+            Line::from(Span::styled("Press ? to close", Style::default().fg(Color::DarkGray))),
+        ];
+        
+        let help = Paragraph::new(help_text)
+            .block(Block::default().borders(Borders::ALL).title(" Help "))
+            .alignment(Alignment::Left);
+        f.render_widget(help, help_area);
+    }
+}
+
+fn centered_rect(percent_x: u16, percent_y: u16, r: Rect) -> Rect {
     let popup_layout = Layout::default()
         .direction(Direction::Vertical)
         .constraints([

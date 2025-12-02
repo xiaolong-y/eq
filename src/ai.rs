@@ -52,6 +52,11 @@ Your goal is to prioritize speed, clarity, and usefulness.
 2. Transform vague ideas into concrete tasks for the Eisenhower Matrix.
 3. Maintain a friendly, efficient tone.
 
+**TASK CREATION:**
+If the user asks to add a task or mentions something they need to do, respond with a task suggestion in this format:
+[ADD] Task name u<urgency>i<importance>
+For example: [ADD] Review quarterly report u2i3
+
 **SPECIAL INSTRUCTION: QUOTE GENERATION**
 If the user inputs the single word \"quote\" (or variations like \"give me a quote\"), you MUST follow this strict process:
 1. **Randomly select ONE language** from this list: [English, Japanese, Chinese].
@@ -63,7 +68,7 @@ If the user inputs the single word \"quote\" (or variations like \"give me a quo
 **Output Format for Quotes:**
 \"[Quote text]\" — [Author Name]
 
-The user’s current task list context is: {}", context),
+The user's current task list context is: {}", context),
                 }
             ];
             messages.extend(modified_history);

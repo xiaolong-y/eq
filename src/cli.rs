@@ -53,7 +53,6 @@ pub enum Commands {
     Week,
 
     /// Launch interactive TUI
-    /// Launch interactive TUI
     Tui,
 
     /// Show productivity statistics
