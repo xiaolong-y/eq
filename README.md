@@ -120,15 +120,27 @@ eq stats              # Show productivity statistics
 
 ## 💾 Data & Logging
 
-### Storage
-Tasks are stored in a `data` subdirectory relative to where you run the command:
-- **Tasks**: `./data/tasks.json`
-- **Chat History**: `./data/chat_history.json` (persisted across sessions)
+### Storage Location
+EQ stores all data in your operating system's standard application data directory, ensuring consistency regardless of where you run the command:
 
-### Event Log
-- **Location**: `./data/history.jsonl`
-- **Format**: JSON Lines (one JSON object per line).
+- **macOS**: `~/Library/Application Support/dev.quad_tasks.eq/`
+- **Linux**: `~/.local/share/dev.quad_tasks.eq/`
+- **Windows**: `%APPDATA%\quad_tasks\eq\data\`
 
+### Data Files
+- **`tasks.json`**: All your tasks with metadata
+- **`chat_history.json`**: AI chat conversation history
+- **`history.jsonl`**: Event log in JSON Lines format
+
+### Custom Data Directory
+You can override the default location by setting the `EQ_DATA_DIR` environment variable:
+```bash
+export EQ_DATA_DIR="$HOME/my-custom-location"
+eq tui
+```
+
+### Event Log Format
+Each line in `history.jsonl` is a JSON object tracking task lifecycle events:
 ```json
 {"id":"...","timestamp":"...","action":"Created","task_id":"...","details":"Created task: Buy milk"}
 ```
