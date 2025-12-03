@@ -1,6 +1,6 @@
 <div align="center">
   <img src="assets/logo.png" alt="eq Logo" width="120"/>
-  <h1>EQ</h1>
+  <h1>eq</h1>
   <p><strong>Focus on what matters.</strong></p>
   <p>
     <a href="https://xiaolong-y.github.io/eq/">Website</a> •
