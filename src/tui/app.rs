@@ -11,6 +11,9 @@ use std::io;
 
 use super::zen::ZenState;
 use crate::ai::{AIClient, AIResponse, ChatMessage};
+use crate::parser::ai_commands::{
+    parse_commands, AICommand, CommandResults, TaskIdentifier,
+};
 use std::sync::mpsc;
 
 pub enum CurrentScreen {
@@ -44,6 +47,9 @@ pub struct App<'a> {
     pub show_chat_help: bool,        // Fix #5: Chat help toggle
     pub spinner_state: u8,           // Spinner animation state
     pub zen_state: Option<ZenState>, // Zen mode state with particles and pomodoro
+
+    // Pending AI commands
+    pub pending_commands: Vec<AICommand>,
 }
 
 impl<'a> App<'a> {
@@ -79,6 +85,7 @@ impl<'a> App<'a> {
             show_chat_help: false,
             spinner_state: 0,
             zen_state: None,
+            pending_commands: Vec::new(),
         }
     }
 
@@ -125,6 +132,194 @@ impl<'a> App<'a> {
             })
             .collect();
         let _ = TaskStore::save_chat_history(&history);
+    }
+
+    /// Process AI response and extract commands
+    pub fn process_ai_response(&mut self, content: String) -> String {
+        let commands = parse_commands(&content);
+        if commands.is_empty() {
+            return content;
+        }
+
+        self.pending_commands = commands;
+        
+        // Format the pending commands for display
+        let mut msg = content;
+        msg.push_str("\n\n━━━ Pending Commands ━━━\n");
+        
+        for (i, cmd) in self.pending_commands.iter().enumerate() {
+            match cmd {
+                AICommand::Add(t) => {
+                    msg.push_str(&format!("  {}. ADD: {} (u{}i{})\n", i + 1, t.title, t.urgency, t.importance));
+                }
+                AICommand::Done(id) => {
+                    msg.push_str(&format!("  {}. DONE: {}\n", i + 1, self.format_identifier(id)));
+                }
+                AICommand::Drop(id) => {
+                    msg.push_str(&format!("  {}. DROP: {}\n", i + 1, self.format_identifier(id)));
+                }
+                AICommand::Edit { target, new_title, new_urgency, new_importance } => {
+                    let target_str = self.format_identifier(target);
+                    let mut changes = Vec::new();
+                    if let Some(t) = new_title { changes.push(format!("title='{}'", t)); }
+                    if let Some(u) = new_urgency { changes.push(format!("urgency={}", u)); }
+                    if let Some(i) = new_importance { changes.push(format!("importance={}", i)); }
+                    
+                    msg.push_str(&format!("  {}. EDIT: {} → {}\n", i + 1, target_str, changes.join(", ")));
+                }
+            }
+        }
+        
+        msg.push_str("\n⚡ Press [y] to execute, [n] to cancel");
+        msg
+    }
+
+    /// Execute all pending commands
+    pub fn execute_pending_commands(&mut self) -> String {
+        if self.pending_commands.is_empty() {
+            return String::new();
+        }
+
+        let commands = std::mem::take(&mut self.pending_commands);
+        let mut results = CommandResults::default();
+
+        for cmd in commands {
+            match cmd {
+                AICommand::Add(parsed) => {
+                    let task = crate::models::task::Task::new(
+                        parsed.title.clone(),
+                        parsed.urgency,
+                        parsed.importance,
+                        self.view_date,
+                    );
+                    self.store.add_task(task);
+                    results.tasks_added.push(parsed);
+                }
+
+                AICommand::Done(identifier) => {
+                    if let Some((task_id, title)) = self.find_task_by_identifier(&identifier) {
+                        self.store.toggle_complete_task(task_id);
+                        results.tasks_completed.push(title);
+                    } else {
+                        results.errors.push(format!(
+                            "Could not find task: {}",
+                            self.format_identifier(&identifier)
+                        ));
+                    }
+                }
+
+                AICommand::Drop(identifier) => {
+                    if let Some((task_id, title)) = self.find_task_by_identifier(&identifier) {
+                        self.store.drop_task(task_id);
+                        results.tasks_dropped.push(title);
+                    } else {
+                        results.errors.push(format!(
+                            "Could not find task: {}",
+                            self.format_identifier(&identifier)
+                        ));
+                    }
+                }
+
+                AICommand::Edit {
+                    target,
+                    new_title,
+                    new_urgency,
+                    new_importance,
+                } => {
+                    if let Some((task_id, old_title)) = self.find_task_by_identifier(&target) {
+                        let (current_title, current_u, current_i) = {
+                            let task = self.store.tasks.iter().find(|t| t.id == task_id).unwrap();
+                            (task.title.clone(), task.urgency, task.importance)
+                        };
+
+                        let final_title = new_title.unwrap_or(current_title);
+                        let final_u = new_urgency.unwrap_or(current_u);
+                        let final_i = new_importance.unwrap_or(current_i);
+
+                        self.store.update_task(task_id, final_title.clone(), final_u, final_i);
+                        results.tasks_edited.push(format!(
+                            "{} → {} (u{}i{})",
+                            old_title, final_title, final_u, final_i
+                        ));
+                    } else {
+                        results.errors.push(format!(
+                            "Could not find task: {}",
+                            self.format_identifier(&target)
+                        ));
+                    }
+                }
+            }
+        }
+
+        // Save the store if we made any changes
+        if !results.tasks_added.is_empty()
+            || !results.tasks_completed.is_empty()
+            || !results.tasks_dropped.is_empty()
+            || !results.tasks_edited.is_empty()
+        {
+            let _ = self.store.save();
+            self.clamp_selected_index();
+        }
+
+        results.format_confirmation()
+    }
+
+    /// Cancel pending commands without executing
+    pub fn cancel_pending_commands(&mut self) -> String {
+        let count = self.pending_commands.len();
+        self.pending_commands.clear();
+        format!("\n\n━━━ Cancelled {} command(s) ━━━", count)
+    }
+
+    /// Check if there are pending commands awaiting confirmation
+    pub fn has_pending_commands(&self) -> bool {
+        !self.pending_commands.is_empty()
+    }
+
+    /// Find a task by identifier (title fragment or index)
+    fn find_task_by_identifier(&self, identifier: &TaskIdentifier) -> Option<(uuid::Uuid, String)> {
+        match identifier {
+            TaskIdentifier::Index(idx) => {
+                // Get tasks in current quadrant, sorted by score
+                let mut tasks: Vec<&crate::models::task::Task> = self
+                    .store
+                    .tasks
+                    .iter()
+                    .filter(|t| {
+                        t.date == self.view_date
+                            && t.status == TaskStatus::Pending
+                            && t.quadrant() == self.selected_quadrant
+                    })
+                    .collect();
+                tasks.sort_by_key(|t| std::cmp::Reverse(t.score()));
+
+                // 1-based index
+                if *idx > 0 && *idx <= tasks.len() {
+                    let task = tasks[*idx - 1];
+                    Some((task.id, task.title.clone()))
+                } else {
+                    None
+                }
+            }
+            TaskIdentifier::Title(title_fragment) => {
+                // Case-insensitive substring match on today's pending tasks
+                let fragment_lower = title_fragment.to_lowercase();
+                self.store
+                    .tasks
+                    .iter()
+                    .filter(|t| t.date == self.view_date && t.status == TaskStatus::Pending)
+                    .find(|t| t.title.to_lowercase().contains(&fragment_lower))
+                    .map(|t| (t.id, t.title.clone()))
+            }
+        }
+    }
+
+    /// Format identifier for error messages
+    fn format_identifier(&self, identifier: &TaskIdentifier) -> String {
+        match identifier {
+            TaskIdentifier::Index(idx) => format!("#{}", idx),
+            TaskIdentifier::Title(t) => format!("\"{}\"", t),
+        }
     }
 }
 
@@ -173,9 +368,12 @@ fn run_app<B: ratatui::backend::Backend>(
                 app.is_loading = false;
                 match response {
                     AIResponse::Success(content) => {
+                        // Process response and auto-add any [ADD] tasks
+                        let full_content = app.process_ai_response(content);
+
                         app.chat_history.push(ChatMessage {
                             role: "assistant".to_string(),
-                            content,
+                            content: full_content,
                         });
                         // Fix #8: Auto-save after AI response
                         app.save_chat_history();

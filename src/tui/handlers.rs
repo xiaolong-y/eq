@@ -236,7 +236,35 @@ fn handle_editing_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
 
 fn handle_chat_screen(key: KeyEvent, app: &mut App) -> Option<bool> {
     match key.code {
+        // Handle pending command confirmation
+        KeyCode::Char('y') | KeyCode::Char('Y') if app.chat_input.is_empty() && app.has_pending_commands() => {
+            let result = app.execute_pending_commands();
+            // Append result to last assistant message
+            if let Some(last_msg) = app.chat_history.last_mut() {
+                if last_msg.role == "assistant" {
+                    last_msg.content.push_str(&result);
+                }
+            }
+            app.save_chat_history();
+            return Some(false);
+        }
+        KeyCode::Char('n') | KeyCode::Char('N') if app.chat_input.is_empty() && app.has_pending_commands() => {
+            let result = app.cancel_pending_commands();
+            // Append cancellation to last assistant message
+            if let Some(last_msg) = app.chat_history.last_mut() {
+                if last_msg.role == "assistant" {
+                    last_msg.content.push_str(&result);
+                }
+            }
+            app.save_chat_history();
+            return Some(false);
+        }
+
         KeyCode::Esc => {
+            // Cancel pending commands on exit
+            if app.has_pending_commands() {
+                let _ = app.cancel_pending_commands();
+            }
             app.current_screen = CurrentScreen::Main;
             // Fix #8: Save chat on exit
             app.save_chat_history();
