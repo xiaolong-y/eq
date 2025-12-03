@@ -265,13 +265,25 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         .borders(Borders::TOP)
         .title(" Message (PgUp/PgDn to scroll, Ctrl+L clear) ");
 
+    // Calculate scroll for input to keep cursor visible
+    let width = input_area.width as usize;
+    let len = app.chat_input.len();
+    let scroll_h = if len >= width {
+        (len - width + 1) as u16
+    } else {
+        0
+    };
+
     let input = Paragraph::new(app.chat_input.as_str())
         .style(Style::default().fg(Color::White))
-        .block(input_block);
+        .block(input_block)
+        .scroll((0, scroll_h));
     f.render_widget(input, input_area);
 
     // Show cursor in chat input
-    let cursor_x = input_area.x + app.chat_input.len() as u16;
+    // Adjust cursor position based on scroll
+    let cursor_visual_x = (len as u16).saturating_sub(scroll_h);
+    let cursor_x = input_area.x + cursor_visual_x;
     let cursor_y = input_area.y + 1;
     f.set_cursor_position((cursor_x.min(input_area.right() - 1), cursor_y));
 
