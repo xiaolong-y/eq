@@ -16,7 +16,7 @@
 ## Installation
 
 ```bash
-cargo install --path .
+cargo install eq
 ```
 
 ## Features
@@ -61,6 +61,9 @@ eq tui
 Add tasks directly from your terminal:
 
 ```bash
+# Invoke eq tui to launch the interactive interface
+eq tui
+
 # Add a high-priority task (Urgency 3, Importance 3)
 eq add "Fix server crash !!!$$$"
 
