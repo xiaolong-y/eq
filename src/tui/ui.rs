@@ -42,7 +42,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Header
     let date_str = app.view_date.format("%a %b %d").to_string();
-    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}    [?] [q]", date_str);
+    let header_text = format!(" Xiaolong's Eisenhower Quadrants   {}    [?] ", date_str);
 
     let header = Paragraph::new(header_text)
         .block(Block::default().borders(Borders::ALL))

@@ -161,9 +161,7 @@ impl ZenState {
                 );
             }
         }
-
-        // Render pomodoro timer (centered)
-        if let Some(ref pomo) = self.pomodoro {
+            if let Some(ref pomo) = self.pomodoro {
             let center_x = area.x + area.width / 2;
             let center_y = area.y + area.height / 2;
 
@@ -179,37 +177,26 @@ impl ZenState {
                     .add_modifier(ratatui::style::Modifier::BOLD),
             );
 
-            // Progress indicator (elegant dot sequence)
-            let dot_count = 300; // 300 dots = 5 seconds per dot for 25min timer
-            let filled_dots = (dot_count as f64 * pomo.progress()) as u16;
+            // Progress indicator - 50 dots for 25 minutes (each dot = 30 seconds)
+            let dot_count = 50;
+            let elapsed = pomo.elapsed_secs();
+            let filled_dots = (elapsed / 30).min(dot_count as u64) as u16;
 
-            // Calculate centered position for dot sequence (compact, no spacing)
-            let dots_width = dot_count; // Adjacent dots
-            let dots_x = center_x.saturating_sub(dots_width / 2);
+            // Calculate centered position for dot sequence
+            let dots_x = center_x.saturating_sub(dot_count / 2);
 
-            // Render compact dot sequence with color gradient
+            // Render dot sequence (green filled, gray empty)
             for i in 0..dot_count {
                 let x_pos = dots_x + i;
 
                 if i < filled_dots {
-                    // Filled dots with gradient based on position
-                    let progress_at_dot = i as f64 / dot_count as f64;
-                    let color = if progress_at_dot < 0.75 {
-                        // Green to yellow gradient
-                        let t = progress_at_dot / 0.75;
-                        Color::Rgb(
-                            (100.0 + t * 80.0) as u8,
-                            180,
-                            (100.0 - t * 80.0) as u8,
-                        )
-                    } else if progress_at_dot < 0.9 {
-                        // Yellow
-                        Color::Rgb(180, 180, 100)
-                    } else {
-                        // Red for final stretch
-                        Color::Rgb(180, 100, 100)
-                    };
-                    buf.set_string(x_pos, center_y, "•", Style::default().fg(color));
+                    // Filled dots - green
+                    buf.set_string(
+                        x_pos,
+                        center_y,
+                        "•",
+                        Style::default().fg(Color::Rgb(100, 180, 100)),
+                    );
                 } else {
                     // Empty dots
                     buf.set_string(
