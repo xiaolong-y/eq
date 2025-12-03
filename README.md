@@ -1,157 +1,101 @@
-# EQ: Eisenhower Quadrants
+<div align="center">
+  <img src="assets/logo.png" alt="eq Logo" width="120"/>
+  <h1>EQ</h1>
+  <p><strong>Focus on what matters.</strong></p>
+  <p>
+    <a href="https://xiaolong-y.github.io/eq/">Website</a> •
+    <a href="#installation">Installation</a> •
+    <a href="#features">Features</a>
+  </p>
+</div>
 
-**EQ** is a terminal-based task manager built in Rust, designed to help you prioritize tasks using the **Eisenhower Matrix** method. It focuses on speed, keyboard-centric navigation, and clear visual separation of priorities.
+---
 
-## 🚀 Installation
+**eq** is a terminal-based task manager designed for speed and focus. It uses the Eisenhower Matrix to prioritize tasks by urgency and importance, keeping your workflow efficient and keyboard-driven.
 
-### Prerequisites
-- Rust toolchain (`cargo`)
-- (Optional) OpenAI API key for AI chat features
+## Installation
 
-### Build & Install
-To run `eq` from anywhere:
+```bash
+cargo install --path .
+```
 
-1.  **Install**:
-    ```bash
-    cargo install --path .
-    ```
+## Features
 
-2.  **Add to PATH** (if not already):
-    Add this to your `~/.zshrc` or `~/.bashrc`:
-    ```bash
-    export PATH="$HOME/.cargo/bin:$PATH"
-    ```
-    Then run `source ~/.zshrc`.
+- **Eisenhower Matrix**
+  Automatically sorts tasks into four quadrants: Do First, Schedule, Delegate, and Drop.
 
-3.  **(Optional) Set up AI Chat**:
-    Create a `.env` file in your working directory:
-    ```bash
-    OPENAI_API_KEY=your-api-key-here
-    ```
+- **Zen Mode**
+  A distraction-free interface with a built-in Pomodoro timer and floating particles to help you maintain flow.
 
-Now you can just run:
+- **AI Integration**
+  Chat with your tasks. The AI helps you prioritize, break down complex projects, and organize your day.
+
+- **Keyboard Driven**
+  Navigate and manage tasks entirely from your keyboard using Vim-like shortcuts.
+
+- **Privacy First**
+  All data is stored locally on your machine.
+
+## Usage
+
+Launch the interactive interface:
+
 ```bash
 eq tui
-eq add "Task"
 ```
 
----
+### Shortcuts
 
-## 🧠 Core Concepts
+| Key | Action |
+| :--- | :--- |
+| `a` | Add task |
+| `d` | Toggle done |
+| `x` | Delete task |
+| `z` | Zen Mode |
+| `c` | AI Chat |
+| `Tab` | Switch Quadrant |
+| `?` | Help |
 
-### The Eisenhower Matrix
-Tasks are categorized into four quadrants based on **Importance** and **Urgency**:
+### CLI
 
-1.  **DO FIRST** (Q1): High Importance, High Urgency.
-2.  **SCHEDULE** (Q2): High Importance, Low Urgency.
-3.  **DELEGATE** (Q3): Low Importance, High Urgency.
-4.  **DROP** (Q4): Low Importance, Low Urgency.
+Add tasks directly from your terminal:
 
-### Priority Scoring
-Tasks are sorted within quadrants by a calculated score:
-```
-Score = (Importance × 3) + (Urgency × 2)
-```
-- **Importance**: 1 (Low) to 3 (High)
-- **Urgency**: 1 (Low) to 3 (High)
-- **Max Score**: 15 (I=3, U=3)
-
----
-
-## ⌨️ TUI (Interactive Mode)
-
-Launch with: `eq tui`
-
-Press **`?`** anytime to see the full keyboard shortcuts reference.
-
-### Quick Start
-- **`a`**: Add a new task (format: `Task Name !!!$$` or `Task Name u3i2`)
-- **`d`** / **`Enter`**: Toggle task done/pending
-- **`x`**: Drop (delete) a task
-- **`e`**: Edit the selected task
-- **`↑↓`** or **`j k`**: Navigate tasks
-- **`Tab`**: Cycle through quadrants
-- **`t`**: Toggle tomorrow view
-- **`y`**: View yesterday's tasks
-- **`z`**: Enter zen/focus mode
-- **`c`**: Open AI Chat interface
-- **`q`**: Quit
-
-### AI Chat Interface
-- **`Enter`**: Send message.
-- **`Esc`**: Close chat.
-- **`PgUp` / `PgDn`**: Scroll chat history.
-- **`Ctrl+K` / `Ctrl+J`**: Scroll one line.
-- **`Home`**: Jump to top.
-- **`End`**: Resume auto-scroll.
-- **`Ctrl+L`**: Clear chat history.
-- **`Ctrl+W`**: Delete word.
-- **`Ctrl+U`**: Clear input line.
-- **`?`**: Toggle help (when input is empty).
-
----
-
-## 💻 CLI Usage
-
-You can also manage tasks directly from the command line.
-
-### Adding Tasks
-Use `!` for urgency and `$` for importance, or `u<n>i<n>` shorthand.
 ```bash
-eq add "Fix server crash !!!$$$"   # High Urgency (3), High Importance (3)
-eq add "Buy milk u1i2"            # Urgency 1, Importance 2
+# Add a high-priority task (Urgency 3, Importance 3)
+eq add "Fix server crash !!!$$$"
+
+# Add a scheduled task (Urgency 1, Importance 3)
+eq add "Plan roadmap u1i3"
+
+# View stats
+eq stats
+```
+
+## Configuration
+
+Data is stored in your system's standard application data directory. To enable AI features, set `OPENAI_API_KEY` in your environment or a `.env` file.action-free focus mode.
+- **Pomodoro Timer**: Built-in 25-minute timer.
+- **Visuals**: Floating particles to help you flow.
+- **Single Task**: Focus on one thing at a time.
+
+### AI Integration
+- **Prioritization Help**: Ask AI how to categorize tasks.
+- **Breakdown**: Split complex projects into steps.
+- **Context Aware**: The AI knows your current task list.
+- **Automatic Audit**: The AI helps you add tasks upon your confirmation. 
+
+### CLI Usage
+Add tasks quickly from your shell:
+```bash
+eq add "Fix server crash !!!$$$"   # High Urgency (3), High Importance (3) -> Q1
+eq add "Buy milk u1i2"            # Urgency 1, Importance 2 -> Q3
 eq add "Call Mom" --tomorrow      # Schedule for tomorrow
 ```
 
-### Managing Tasks
-```bash
-eq today              # View today's matrix
-eq tomorrow           # View tomorrow's matrix
-eq yesterday          # View yesterday's matrix
-eq week               # View weekly overview
-eq done <id>          # Mark as complete
-eq drop <id>          # Delete task
-eq edit <id> u3i1     # Update priority
-eq stats              # Show productivity statistics
-```
-
 ---
 
-## 💾 Data & Logging
-
-### Storage Location
-EQ stores all data in your operating system's standard application data directory, ensuring consistency regardless of where you run the command:
-
-- **macOS**: `~/Library/Application Support/dev.quad_tasks.eq/`
-- **Linux**: `~/.local/share/dev.quad_tasks.eq/`
-- **Windows**: `%APPDATA%\quad_tasks\eq\data\`
-
-### Data Files
-- **`tasks.json`**: All your tasks with metadata
-- **`chat_history.json`**: AI chat conversation history
-- **`history.jsonl`**: Event log in JSON Lines format
-
-### Custom Data Directory
-You can override the default location by setting the `EQ_DATA_DIR` environment variable:
-```bash
-export EQ_DATA_DIR="$HOME/my-custom-location"
-eq tui
-```
-
-### Event Log Format
-Each line in `history.jsonl` is a JSON object tracking task lifecycle events:
-```json
-{"id":"...","timestamp":"...","action":"Created","task_id":"...","details":"Created task: Buy milk"}
-```
-
----
-
-## 🛠️ Recent Improvements
-
-- **Chat Scrolling**: Navigate chat history with PgUp/PgDn, Ctrl+K/J
-- **Cursor Visibility**: Input cursor now visible in chat and task editing
-- **Index Stability**: Selection doesn't break after completing/dropping tasks
-- **Persistent Chat**: Chat history saved between sessions
-- **Week View**: See your entire week at a glance with `eq week`
-- **Improved Parser**: Edge cases like `ui` without numbers handled gracefully
-- **Cleaner Codebase**: Refactored widget system, simplified task lookup
+## Data
+Data is stored locally in your system's standard data directory (e.g., `~/Library/Application Support/dev.quad_tasks.eq/` on macOS).
+- `tasks.json`: Task database.
+- `history.jsonl`: Event log.
+- `chat_history.json`: Saved AI conversations.

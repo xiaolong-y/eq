@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EQ: Eisenhower Quadrants</title>
+    <title>eq: Eisenhower Quadrants</title>
     <link rel="stylesheet" href="style.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -14,6 +14,7 @@
 <body>
     <div class="container">
         <header>
+            <img src="eq_duck.png" alt="EQ Logo" class="site-logo">
             <h1>eq</h1>
             <p class="tagline">A terminal-based task manager for high-performance prioritization.</p>
             <div class="actions">
@@ -25,9 +26,8 @@
         <main>
             <section id="intro">
                 <p>
-                    <strong>EQ</strong> (Eisenhower Quadrants) is a CLI tool built in Rust that helps you prioritize
-                    tasks using the Eisenhower Matrix.
-                    It is designed for speed, keyboard-centric navigation, and focus.
+                    <strong>eq</strong> helps you focus on what matters using the <strong>Eisenhower Matrix</strong>.
+                    It sorts tasks by importance and urgency, keeping your workflow fast and keyboard-driven.
                 </p>
 
                 <div class="terminal-window">
@@ -91,66 +91,18 @@
                         <span class="prompt">$</span> cargo install --path .
                     </div>
                 </div>
-                <p>Or add the binary to your path manually.</p>
             </section>
 
-            <section id="guide">
-                <h2>User Guide</h2>
+            <section id="features">
+                <h2>Features</h2>
 
-                <h3>1. Adding Tasks</h3>
-                <p>You can add tasks via the CLI or inside the TUI. The parser understands natural language for
-                    priority.</p>
+                <h3>🧠 The Eisenhower Matrix</h3>
+                <p>Tasks are automatically sorted into four quadrants based on urgency and importance. No manual sorting
+                    required.</p>
 
-                <div class="terminal-window">
-                    <div class="terminal-header">
-                        <div class="dot red"></div>
-                        <div class="dot yellow"></div>
-                        <div class="dot green"></div>
-                    </div>
-                    <div class="terminal-content">
-                        <div style="color: #999; margin-bottom: 0.5rem;"># High Urgency (!!!) and High Importance ($$$)
-                            -> Q1</div>
-                        <div><span class="prompt">$</span> eq add "Fix production bug !!!$$$"</div>
-                        <br>
-                        <div style="color: #999; margin-bottom: 0.5rem;"># Explicit numerical priority (u=urgency,
-                            i=importance)</div>
-                        <div><span class="prompt">$</span> eq add "Read documentation u1i3"</div>
-                    </div>
-                </div>
-
-                <h3>2. The TUI Interface</h3>
-                <p>Launch the interactive mode with <code>eq tui</code>. The interface is divided into 4 quadrants.</p>
-
-                <div class="shortcuts-grid">
-                    <div class="shortcut-item">
-                        <span>Navigate Tasks</span>
-                        <div><span class="key">j</span> <span class="key">k</span></div>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Switch Quadrant</span>
-                        <span class="key">Tab</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Add Task</span>
-                        <span class="key">a</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Toggle Done</span>
-                        <span class="key">d</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Delete Task</span>
-                        <span class="key">x</span>
-                    </div>
-                    <div class="shortcut-item">
-                        <span>Zen Mode</span>
-                        <span class="key">z</span>
-                    </div>
-                </div>
-
-                <h3>3. Zen Mode</h3>
-                <p>Press <span class="key">z</span> to enter Zen Mode. This isolates the current task and starts a
-                    Pomodoro timer with floating particles for focus.</p>
+                <h3>🧘 Zen Mode</h3>
+                <p>Press <span class="key">z</span> to enter a distraction-free focus mode with a built-in Pomodoro
+                    timer.</p>
 
                 <div class="terminal-window">
                     <div class="terminal-header">
@@ -164,15 +116,34 @@
                         <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">24:59</div>
                         <div style="color: var(--accent-color);">••••••••••••••••••••••••••••••</div>
                         <div style="margin-top: 1.5rem; font-size: 1.1rem;">Fix server crash</div>
-                        <div style="color: #666; font-size: 0.8rem; margin-top: 0.5rem;">Urgency: 3 • Importance: 3
-                        </div>
                     </div>
                 </div>
 
-                <h3>4. AI Chat</h3>
-                <p>Press <span class="key">c</span> to open the AI chat. You can ask the AI to help you prioritize or
-                    break down tasks.</p>
-                <p class="text-muted">Note: Requires <code>OPENAI_API_KEY</code> in your <code>.env</code> file.</p>
+                <h3>🤖 AI Integration</h3>
+                <p>Press <span class="key">c</span> to chat with your tasks. The AI helps you prioritize and break down
+                    complex work.</p>
+            </section>
+
+            <section id="guide">
+                <h2>Quick Reference</h2>
+                <div class="shortcuts-grid">
+                    <div class="shortcut-item">
+                        <span>Add Task</span>
+                        <span class="key">a</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Toggle Done</span>
+                        <span class="key">d</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Zen Mode</span>
+                        <span class="key">z</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>AI Chat</span>
+                        <span class="key">c</span>
+                    </div>
+                </div>
             </section>
 
         </main>
