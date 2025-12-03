@@ -177,7 +177,7 @@ fn render_chat(f: &mut Frame, app: &mut App) {
 
     let block = Block::default()
         .borders(Borders::ALL)
-        .title(" AI Chat (Esc to close) ");
+        .title("Chat with eq (Esc to close) ");
     f.render_widget(block, area);
 
     // Messages area
@@ -194,7 +194,7 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         let (role, color) = if msg.role == "user" {
             ("You", Color::Yellow)
         } else {
-            ("AI", Color::Cyan)
+            ("eq", Color::Cyan)
         };
 
         // Role header
@@ -215,7 +215,7 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         let frames = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"];
         let frame = frames[app.spinner_state as usize % frames.len()];
         lines.push(Line::from(Span::styled(
-            format!("{} Thinking...", frame),
+            format!("{} Gently minding your business...", frame),
             Style::default().fg(Color::Green),
         )));
     }
@@ -270,12 +270,12 @@ fn render_chat(f: &mut Frame, app: &mut App) {
         .block(input_block);
     f.render_widget(input, input_area);
 
-    // Fix #5: Show cursor in chat input
+    // Show cursor in chat input
     let cursor_x = input_area.x + app.chat_input.len() as u16;
     let cursor_y = input_area.y + 1;
     f.set_cursor_position((cursor_x.min(input_area.right() - 1), cursor_y));
 
-    // Fix #5: Chat help overlay
+    // Chat help overlay
     if app.show_chat_help {
         let help_area = centered_rect(50, 40, f.area());
         f.render_widget(Clear, help_area);
