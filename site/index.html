@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,94 +10,180 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="container">
         <header>
-            <pre class="ascii-logo">
-  _____ ____  
- | ____/ __ \ 
- |  __| |  | |
- | |__| |__| |
- |_____\___\_\
-            </pre>
-            <h1>EQ: Eisenhower Quadrants</h1>
-            <p class="tagline">Terminal-based task manager for high-performance prioritization.</p>
-            <div class="badges">
-                <span class="badge">Rust</span>
-                <span class="badge">TUI</span>
-                <span class="badge">Productivity</span>
+            <h1>eq</h1>
+            <p class="tagline">A terminal-based task manager for high-performance prioritization.</p>
+            <div class="actions">
+                <a href="#install" class="btn btn-primary">Get Started</a>
+                <a href="https://github.com/xiaolong-y/eq" class="btn btn-secondary">GitHub</a>
             </div>
         </header>
 
         <main>
-            <section id="about">
-                <h2>What is EQ?</h2>
+            <section id="intro">
                 <p>
-                    <strong>EQ</strong> is a terminal-based task manager built in Rust, designed to help you prioritize tasks using the <strong>Eisenhower Matrix</strong> method. 
-                    It focuses on speed, keyboard-centric navigation, and clear visual separation of priorities.
+                    <strong>EQ</strong> (Eisenhower Quadrants) is a CLI tool built in Rust that helps you prioritize
+                    tasks using the Eisenhower Matrix.
+                    It is designed for speed, keyboard-centric navigation, and focus.
                 </p>
-                <div class="quadrants-preview">
-                    <div class="quadrant q1">
-                        <h3>DO FIRST (Q1)</h3>
-                        <p>High Importance, High Urgency</p>
+
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
                     </div>
-                    <div class="quadrant q2">
-                        <h3>SCHEDULE (Q2)</h3>
-                        <p>High Importance, Low Urgency</p>
-                    </div>
-                    <div class="quadrant q3">
-                        <h3>DELEGATE (Q3)</h3>
-                        <p>Low Importance, High Urgency</p>
-                    </div>
-                    <div class="quadrant q4">
-                        <h3>DROP (Q4)</h3>
-                        <p>Low Importance, Low Urgency</p>
+                    <div class="terminal-content">
+                        <div style="text-align: center; margin-bottom: 1rem; border: 1px solid #333; padding: 0.5rem;">
+                            Xiaolong's Eisenhower Quadrants &nbsp;&nbsp; Tue Dec 02 &nbsp;&nbsp; [?]
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; height: 200px;">
+                            <div style="border: 1px solid #333; padding: 0.5rem;">
+                                <div
+                                    style="color: var(--q1); font-weight: bold; border-bottom: 1px dashed #333; margin-bottom: 0.5rem;">
+                                    DO FIRST (Q1)</div>
+                                <div style="background: #222;">> Fix server crash</div>
+                                <div style="color: #666;"> Submit tax report</div>
+                            </div>
+                            <div style="border: 1px solid #333; padding: 0.5rem;">
+                                <div
+                                    style="color: var(--q2); font-weight: bold; border-bottom: 1px dashed #333; margin-bottom: 0.5rem;">
+                                    SCHEDULE (Q2)</div>
+                                <div style="color: #ccc;"> Plan Q1 roadmap</div>
+                                <div style="color: #ccc;"> Weekly review</div>
+                            </div>
+                            <div style="border: 1px solid #333; padding: 0.5rem;">
+                                <div
+                                    style="color: var(--q3); font-weight: bold; border-bottom: 1px dashed #333; margin-bottom: 0.5rem;">
+                                    DELEGATE (Q3)</div>
+                                <div style="color: #ccc;"> Respond to emails</div>
+                            </div>
+                            <div style="border: 1px solid #333; padding: 0.5rem;">
+                                <div
+                                    style="color: var(--q4); font-weight: bold; border-bottom: 1px dashed #333; margin-bottom: 0.5rem;">
+                                    DROP (Q4)</div>
+                                <div style="color: #ccc;"> Scroll Twitter</div>
+                            </div>
+                        </div>
+
+                        <div
+                            style="margin-top: 1rem; border-top: 1px solid #333; padding-top: 0.5rem; color: #666; text-align: center;">
+                            [a]dd [d]one [x]drop [↑↓]nav [tab]quadrant [?]help [q]uit
+                        </div>
                     </div>
                 </div>
             </section>
 
             <section id="install">
-                <h2>🚀 Installation</h2>
-                <div class="code-block">
-                    <div class="code-header">Install via Cargo</div>
-                    <pre><code>cargo install --path .</code></pre>
+                <h2>Installation</h2>
+                <p>Install directly from source using Cargo:</p>
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-content">
+                        <span class="prompt">$</span> cargo install --path .
+                    </div>
                 </div>
-                <p>Or add it to your path manually.</p>
+                <p>Or add the binary to your path manually.</p>
             </section>
 
-            <section id="usage">
-                <h2>⌨️ Usage</h2>
-                <p>Launch the interactive TUI:</p>
-                <div class="code-block">
-                    <pre><code>eq tui</code></pre>
+            <section id="guide">
+                <h2>User Guide</h2>
+
+                <h3>1. Adding Tasks</h3>
+                <p>You can add tasks via the CLI or inside the TUI. The parser understands natural language for
+                    priority.</p>
+
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-content">
+                        <div style="color: #999; margin-bottom: 0.5rem;"># High Urgency (!!!) and High Importance ($$$)
+                            -> Q1</div>
+                        <div><span class="prompt">$</span> eq add "Fix production bug !!!$$$"</div>
+                        <br>
+                        <div style="color: #999; margin-bottom: 0.5rem;"># Explicit numerical priority (u=urgency,
+                            i=importance)</div>
+                        <div><span class="prompt">$</span> eq add "Read documentation u1i3"</div>
+                    </div>
                 </div>
-                
-                <h3>Quick Shortcuts</h3>
-                <ul class="shortcuts-list">
-                    <li><kbd>a</kbd> Add new task</li>
-                    <li><kbd>d</kbd> Toggle done</li>
-                    <li><kbd>x</kbd> Drop task</li>
-                    <li><kbd>z</kbd> Zen mode</li>
-                    <li><kbd>c</kbd> AI Chat</li>
-                    <li><kbd>?</kbd> Help</li>
-                </ul>
+
+                <h3>2. The TUI Interface</h3>
+                <p>Launch the interactive mode with <code>eq tui</code>. The interface is divided into 4 quadrants.</p>
+
+                <div class="shortcuts-grid">
+                    <div class="shortcut-item">
+                        <span>Navigate Tasks</span>
+                        <div><span class="key">j</span> <span class="key">k</span></div>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Switch Quadrant</span>
+                        <span class="key">Tab</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Add Task</span>
+                        <span class="key">a</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Toggle Done</span>
+                        <span class="key">d</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Delete Task</span>
+                        <span class="key">x</span>
+                    </div>
+                    <div class="shortcut-item">
+                        <span>Zen Mode</span>
+                        <span class="key">z</span>
+                    </div>
+                </div>
+
+                <h3>3. Zen Mode</h3>
+                <p>Press <span class="key">z</span> to enter Zen Mode. This isolates the current task and starts a
+                    Pomodoro timer with floating particles for focus.</p>
+
+                <div class="terminal-window">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-content"
+                        style="text-align: center; height: 180px; display: flex; flex-direction: column; justify-content: center;">
+                        <div style="color: #444; position: absolute;">· ° • . *</div>
+                        <div style="font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem;">24:59</div>
+                        <div style="color: var(--accent-color);">••••••••••••••••••••••••••••••</div>
+                        <div style="margin-top: 1.5rem; font-size: 1.1rem;">Fix server crash</div>
+                        <div style="color: #666; font-size: 0.8rem; margin-top: 0.5rem;">Urgency: 3 • Importance: 3
+                        </div>
+                    </div>
+                </div>
+
+                <h3>4. AI Chat</h3>
+                <p>Press <span class="key">c</span> to open the AI chat. You can ask the AI to help you prioritize or
+                    break down tasks.</p>
+                <p class="text-muted">Note: Requires <code>OPENAI_API_KEY</code> in your <code>.env</code> file.</p>
             </section>
 
-            <section id="features">
-                <h2>✨ Features</h2>
-                <ul>
-                    <li><strong>Eisenhower Matrix:</strong> Automatically sorts tasks by importance and urgency.</li>
-                    <li><strong>Keyboard Driven:</strong> Vim-like navigation (j/k) and shortcuts.</li>
-                    <li><strong>AI Integration:</strong> Chat with your tasks using OpenAI (optional).</li>
-                    <li><strong>Local First:</strong> Data stored locally in JSON/JSONL.</li>
-                </ul>
-            </section>
         </main>
 
         <footer>
-            <p>Built with ❤️ in Rust.</p>
-            <p><a href="https://github.com/xiaolong-y/eq">View on GitHub</a></p>
+            <div>© 2025 Xiaolong</div>
+            <div>
+                <a href="https://github.com/xiaolong-y/eq">Source Code</a>
+            </div>
         </footer>
     </div>
 </body>
+
 </html>
