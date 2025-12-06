@@ -119,9 +119,55 @@
                     </div>
                 </div>
 
-                <h3>🤖 AI Integration</h3>
-                <p>Press <span class="key">c</span> to chat with your tasks. The AI helps you prioritize and break down
-                    complex work.</p>
+                <h3>🤖 AI Integration with Custom Prompt Engineering</h3>
+                <p>Press <span class="key">c</span> to chat with your tasks. <strong>eq</strong> doesn't just use ChatGPT's API—it implements sophisticated prompt engineering to function as an executive assistant specialized in the Eisenhower Matrix methodology.</p>
+
+                <h4 style="margin-top: 2rem; color: var(--accent-color);">Engineered Capabilities</h4>
+
+                <p><strong>GTD-Inspired Task Decomposition:</strong> The AI is prompt-engineered to identify the "next physical action" for any goal, breaking large projects into 15-45 minute actionable chunks.</p>
+
+                <div class="terminal-window" style="margin-top: 1rem;">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-content" style="font-size: 0.85rem;">
+                        <div style="color: #888;">You: "I need to submit my research paper"</div>
+                        <div style="margin-top: 0.5rem;">AI: Let me break this down into next actions:</div>
+                        <div style="color: var(--accent-color); margin-top: 0.3rem;">[ADD] Export bibliography from Zotero u3i3</div>
+                        <div style="color: var(--accent-color);">[ADD] Proofread introduction section u2i3</div>
+                        <div style="color: var(--accent-color);">[ADD] Format figures to journal specifications u2i2</div>
+                        <div style="margin-top: 0.3rem;">Before submitting, you need co-author approval. Should we add that?</div>
+                    </div>
+                </div>
+
+                <p style="margin-top: 1.5rem;"><strong>Rigorous Priority Assessment:</strong> Rather than accepting vague priorities, the AI applies explicit criteria for urgency and importance, challenging assumptions and spotting "urgency theater."</p>
+
+                <p style="margin-top: 1.5rem;"><strong>Multilingual Inspirational Quotes:</strong> Type <code>quote</code> to receive verified quotes from dual sources: a handpicked collection of Paul Graham essays, classical Chinese philosophy, Stoic wisdom, and Japanese business thought—plus the AI's ability to extract quotes from its extensive knowledge base with extremely low hallucination probability due to implemented guardrails.</p>
+
+                <div class="terminal-window" style="margin-top: 1rem;">
+                    <div class="terminal-header">
+                        <div class="dot red"></div>
+                        <div class="dot yellow"></div>
+                        <div class="dot green"></div>
+                    </div>
+                    <div class="terminal-content" style="font-size: 0.85rem;">
+                        <div style="color: #888;">You: quote</div>
+                        <div style="margin-top: 0.5rem; font-style: italic;">"事上磨练" — 王阳明</div>
+                        <div style="color: #666; font-size: 0.8rem;">(Practice and refine yourself through action)</div>
+                    </div>
+                </div>
+
+                <h4 style="margin-top: 2rem; color: var(--accent-color);">Technical Implementation</h4>
+                <ul style="line-height: 1.8;">
+                    <li><strong>Context injection:</strong> Current task list is passed to GPT-4o for relevance</li>
+                    <li><strong>Temperature tuning:</strong> Lower temperature (0.3) for quote retrieval, balanced (0.5) for task planning</li>
+                    <li><strong>Structured output format:</strong> <code>[ADD] Task name u&lt;1-3&gt;i&lt;1-3&gt;</code> for automatic parsing</li>
+                    <li><strong>Role-specific instructions:</strong> Trained to challenge low-value work and identify tasks for delegation or elimination</li>
+                </ul>
+
+                <p style="margin-top: 1rem; font-style: italic; color: #888;">This demonstrates practical prompt engineering deployed in service of productivity—turning a general language model into a domain-specific task management assistant.</p>
             </section>
 
             <section id="guide">
