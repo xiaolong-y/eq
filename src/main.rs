@@ -111,7 +111,7 @@ fn main() -> Result<(), Box<dyn Error>> {
             print_stats(&store);
         }
         Some(Commands::Archive { days }) => {
-            let archived = store.archive_old_tasks(days)?;
+            let archived = store.archive_old_tasks(*days)?;
             store.save()?;
             println!("Archived {} tasks older than {} days", archived, days);
         }
