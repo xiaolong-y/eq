@@ -51,7 +51,6 @@ fn determine_data_dir() -> io::Result<PathBuf> {
 }
 
 /// Returns the path to the archive file
-pub fn archive_file_path() -> Result<PathBuf, String> {
-    let data_dir = get_data_dir()?;
-    Ok(data_dir.join("archive.json"))
+pub fn archive_file_path() -> io::Result<PathBuf> {
+    Ok(data_dir()?.join("archive.json"))
 }
