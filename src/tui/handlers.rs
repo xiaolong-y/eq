@@ -3,7 +3,7 @@ use crate::models::task::{Quadrant, Task, TaskStatus};
 use crate::parser::input::parse_priority;
 use crate::tui::app::{App, CurrentScreen};
 use crate::tui::zen::Pomodoro;
-use crossterm::event::{Event, KeyCode, KeyEvent, KeyModifiers};
+use crossterm::event::{Event, KeyCode, KeyEvent, KeyEventKind, KeyModifiers};
 use std::sync::mpsc;
 
 pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
@@ -30,7 +30,7 @@ pub fn handle_key_events(event: Event, app: &mut App) -> Option<bool> {
     }
 
     match event {
-        Event::Key(key) => match app.current_screen {
+        Event::Key(key) if key.kind == KeyEventKind::Press => match app.current_screen {
             CurrentScreen::Main => handle_main_screen(key, app),
             CurrentScreen::Editing => handle_editing_screen(key, app),
             CurrentScreen::Chat => handle_chat_screen(key, app),

@@ -19,7 +19,14 @@ pub enum Commands {
         /// Schedule for tomorrow
         #[arg(long, short)]
         tomorrow: bool,
+    
+    /// Archive old completed/dropped tasks
+    Archive {
+        /// Days to keep (default: 7)
+        #[arg(short, long, default_value = "7")]
+        days: i64,
     },
+},
 
     /// Mark a task as done
     Done {

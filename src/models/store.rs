@@ -1,8 +1,8 @@
 use crate::models::log::{append_log, EventAction, LogEvent};
 use crate::models::task::{Task, TaskStatus};
-use crate::storage::paths::{chat_history_path, tasks_file_path};
+use crate::storage::paths::{archive_file_path, chat_history_path, tasks_file_path};
 
-use chrono::NaiveDate;
+use chrono::{NaiveDate, Utc, Duration};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::io::Write;
@@ -216,4 +216,69 @@ impl TaskStore {
             .find(|t| t.id.to_string().starts_with(id_or_index))
             .map(|t| t.id)
     }
+
+    /// Archive completed/dropped tasks older than N days to keep active file small
+    pub fn archive_old_tasks(&mut self, days: i64) -> Result<usize, Box<dyn std::error::Error>> {
+        let cutoff = Utc::now().naive_utc().date() - Duration::days(days);
+        
+        // Partition tasks: keep recent/pending, archive old completed/dropped
+        let (keep, archive): (Vec<Task>, Vec<Task>) = self.tasks.drain(..).partition(|t| {
+            match t.status {
+                TaskStatus::Pending => true,
+                TaskStatus::Completed | TaskStatus::Dropped => t.date > cutoff,
+            }
+        });
+        
+        let archive_count = archive.len();
+        self.tasks = keep;
+        
+        if archive_count > 0 {
+            Self::append_to_archive(&archive)?;
+        }
+        
+        Ok(archive_count)
+    }
+    
+    /// Append tasks to archive file
+    fn append_to_archive(tasks: &[Task]) -> Result<(), Box<dyn std::error::Error>> {
+        let path = archive_file_path()?;
+        
+        // Load existing archive
+        let mut archive: Vec<Task> = if path.exists() {
+            let content = fs::read_to_string(&path)?;
+            serde_json::from_str(&content).unwrap_or_default()
+        } else {
+            Vec::new()
+        };
+        
+        // Append new tasks
+        archive.extend(tasks.iter().cloned());
+        
+        // Save
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent)?;
+        }
+        let content = serde_json::to_string_pretty(&archive)?;
+        let tmp_path = path.with_extension("tmp");
+        let mut file = fs::File::create(&tmp_path)?;
+        file.write_all(content.as_bytes())?;
+        file.sync_all()?;
+        fs::rename(tmp_path, path)?;
+        
+        Ok(())
+    }
+    
+    /// Load archived tasks (on demand)
+    pub fn load_archive() -> Result<Vec<Task>, Box<dyn std::error::Error>> {
+        let path = archive_file_path()?;
+        
+        if !path.exists() {
+            return Ok(Vec::new());
+        }
+        
+        let content = fs::read_to_string(&path)?;
+        let tasks = serde_json::from_str(&content)?;
+        Ok(tasks)
+    }
+
 }
